@@ -372,6 +372,8 @@ void ProcessSPEvents(const Parameters &parameters, const Pandora *const pPrimary
             const float voxelZ = (*larsp->m_z)[isp];
             const float voxelE = (*larsp->m_charge)[isp];
 
+	    const float voxelT0 = (*larsp->m_t0)[isp];
+
             // Skip this hit if its coordinates or energy are NaNs
             if (std::isnan(voxelX) || std::isnan(voxelY) || std::isnan(voxelZ) || std::isnan(voxelE))
             {
@@ -394,7 +396,7 @@ void ProcessSPEvents(const Parameters &parameters, const Pandora *const pPrimary
             caloHitParameters.m_cellThickness = voxelWidth;
             caloHitParameters.m_nCellRadiationLengths = 1.f;
             caloHitParameters.m_nCellInteractionLengths = 1.f;
-            caloHitParameters.m_time = 0.f;
+            caloHitParameters.m_time = voxelT0;
             caloHitParameters.m_inputEnergy = voxelE;
             caloHitParameters.m_mipEquivalentEnergy = voxelMipEquivalentE;
             caloHitParameters.m_electromagneticEnergy = voxelE;
@@ -1784,7 +1786,7 @@ lar_content::LArCaloHitParameters MakeDefaultCaloHitParams(float voxelWidth)
     caloHitParameters.m_cellThickness = voxelWidth;
     caloHitParameters.m_nCellRadiationLengths = 1.f;
     caloHitParameters.m_nCellInteractionLengths = 1.f;
-    caloHitParameters.m_time = 0.f;
+    caloHitParameters.m_time = -1.f;
     caloHitParameters.m_inputEnergy = 0.f;
     caloHitParameters.m_mipEquivalentEnergy = 0.f;
     caloHitParameters.m_electromagneticEnergy = 0.f;

@@ -80,6 +80,7 @@ public:
     std::vector<float> *m_endX = nullptr;
     std::vector<float> *m_endY = nullptr;
     std::vector<float> *m_endZ = nullptr;
+    std::vector<float> *m_t0 = nullptr;
     std::vector<float> *m_dirX = nullptr;
     std::vector<float> *m_dirY = nullptr;
     std::vector<float> *m_dirZ = nullptr;
@@ -97,6 +98,7 @@ public:
     std::vector<float> *m_recoHitY = nullptr;
     std::vector<float> *m_recoHitZ = nullptr;
     std::vector<float> *m_recoHitE = nullptr;
+    std::vector<float> *m_recoHitT0 = nullptr;
     std::vector<int> *m_gotMatch = nullptr;
     std::vector<int> *m_mcPDG = nullptr;
     std::vector<long> *m_mcId = nullptr;
@@ -153,6 +155,7 @@ public:
     TBranch *m_b_endX = nullptr;
     TBranch *m_b_endY = nullptr;
     TBranch *m_b_endZ = nullptr;
+    TBranch *m_b_t0 = nullptr;
     TBranch *m_b_dirX = nullptr;
     TBranch *m_b_dirY = nullptr;
     TBranch *m_b_dirZ = nullptr;
@@ -170,6 +173,7 @@ public:
     TBranch *m_b_recoHitY = nullptr;
     TBranch *m_b_recoHitZ = nullptr;
     TBranch *m_b_recoHitE = nullptr;
+    TBranch *m_b_recoHitT0 = nullptr;
     TBranch *m_b_gotMatch = nullptr;
     TBranch *m_b_mcPDG = nullptr;
     TBranch *m_b_mcId = nullptr;
@@ -279,6 +283,7 @@ void LArRecoNDFormat::Init(TTree *tree)
     m_fChain->SetBranchAddress("endX", &m_endX, &m_b_endX);
     m_fChain->SetBranchAddress("endY", &m_endY, &m_b_endY);
     m_fChain->SetBranchAddress("endZ", &m_endZ, &m_b_endZ);
+    m_fChain->SetBranchAddress("t0", &m_t0, &m_b_t0);
     m_fChain->SetBranchAddress("dirX", &m_dirX, &m_b_dirX);
     m_fChain->SetBranchAddress("dirY", &m_dirY, &m_b_dirY);
     m_fChain->SetBranchAddress("dirZ", &m_dirZ, &m_b_dirZ);
@@ -296,6 +301,7 @@ void LArRecoNDFormat::Init(TTree *tree)
     m_fChain->SetBranchAddress("recoHitY", &m_recoHitY, &m_b_recoHitY);
     m_fChain->SetBranchAddress("recoHitZ", &m_recoHitZ, &m_b_recoHitZ);
     m_fChain->SetBranchAddress("recoHitE", &m_recoHitE, &m_b_recoHitE);
+    m_fChain->SetBranchAddress("recoHitT0", &m_recoHitT0, &m_b_recoHitT0);
     m_fChain->SetBranchAddress("gotMatch", &m_gotMatch, &m_b_gotMatch);
     m_fChain->SetBranchAddress("mcPDG", &m_mcPDG, &m_b_mcPDG);
     m_fChain->SetBranchAddress("mcId", &m_mcId, &m_b_mcId);

@@ -13,6 +13,8 @@
 #include "larpandoracontent/LArHelpers/LArClusterHelper.h"
 #include "larpandoracontent/LArHelpers/LArPfoHelper.h"
 
+#include "LArT0Helper.h"
+
 #include "TFile.h"
 #include "TTree.h"
 
@@ -191,6 +193,7 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
     FloatVector nuVtxXVect, nuVtxYVect, nuVtxZVect;
     // Cluster start, end, direction, PCA axis lengths and total hit energy
     FloatVector startXVect, startYVect, startZVect, endXVect, endYVect, endZVect;
+    FloatVector t0Vect;
     FloatVector dirXVect, dirYVect, dirZVect, centroidXVect, centroidYVect, centroidZVect;
     FloatVector primaryLVect, secondaryLVect, tertiaryLVect, energyVect;
     // Best matched MC info
@@ -213,7 +216,7 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
     // The hit vector entries follow the order PFO1[n3DHits1], PFO2[n3DHits2], PFO3[n3DHits3] etc.
     // The sliceId & clusterId vectors keep track of where a given hit comes from
     IntVector recoHitIdVect, recoHitSliceIdVect, recoHitClusterIdVect;
-    FloatVector recoHitXVect, recoHitYVect, recoHitZVect, recoHitEVect;
+    FloatVector recoHitXVect, recoHitYVect, recoHitZVect, recoHitEVect, recoHitT0Vect;
 
     // Get the list of root MCParticles for the MC truth matching
     MCParticleList rootMCParticles;
@@ -370,12 +373,15 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
                 // Cluster energy (sum over all hits)
                 energyVect.emplace_back(clusterEnergy);
 
+		pandora::CaloHitList calo3DHitList;
+		LArClusterHelper::GetAllHits(pCluster3D, calo3DHitList);
+		float clusterT0 = LArT0Helper::GetMedianTime(calo3DHitList);
+		t0Vect.emplace_back(clusterT0);
+
                 if (m_storeClusterRecoHits)
                 {
                     // Store 3D reco hit information for this cluster/PFO. Vector sizes = nPFOs*n3DHits not nPFOs.
                     // The hit vector entries follow the order PFO1[n3DHits1], PFO2[n3DHits2], PFO3[n3DHits3] etc.
-                    pandora::CaloHitList calo3DHitList;
-                    LArClusterHelper::GetAllHits(pCluster3D, calo3DHitList);
                     // Sort hits using their positions
                     calo3DHitList.sort(LArClusterHelper::SortHitsByPosition);
 
@@ -391,6 +397,7 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
                         recoHitYVect.emplace_back(hitPos.GetY());
                         recoHitZVect.emplace_back(hitPos.GetZ());
                         recoHitEVect.emplace_back(hitE);
+			recoHitT0Vect.emplace_back(pCalo3DHit->GetTime());
                     }
                 }
 
@@ -497,6 +504,7 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "endX", &endXVect));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "endY", &endYVect));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "endZ", &endZVect));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "t0", &t0Vect));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "dirX", &dirXVect));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "dirY", &dirYVect));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "dirZ", &dirZVect));
@@ -516,6 +524,7 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
         PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "recoHitY", &recoHitYVect));
         PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "recoHitZ", &recoHitZVect));
         PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "recoHitE", &recoHitEVect));
+	PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "recoHitT0", &recoHitT0Vect));
     }
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "gotMatch", &matchVect));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), m_analysisTreeName.c_str(), "mcPDG", &mcPDGVect));

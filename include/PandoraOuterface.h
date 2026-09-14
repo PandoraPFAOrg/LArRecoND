@@ -334,6 +334,7 @@ private:
     std::vector<float> m_out_endX;
     std::vector<float> m_out_endY;
     std::vector<float> m_out_endZ;
+    std::vector<float> m_out_t0;
     std::vector<float> m_out_dirX;
     std::vector<float> m_out_dirY;
     std::vector<float> m_out_dirZ;
@@ -351,6 +352,7 @@ private:
     std::vector<float> m_out_recoHitY;
     std::vector<float> m_out_recoHitZ;
     std::vector<float> m_out_recoHitE;
+    std::vector<float> m_out_recoHitT0;
     std::vector<int> m_out_gotMatch;
     std::vector<int> m_out_mcPDG;
     std::vector<long> m_out_mcId;
@@ -506,6 +508,7 @@ NDRecoOutputData::NDRecoOutputData(const std::string filename)
     m_treeOut->Branch("endX", &m_out_endX);
     m_treeOut->Branch("endY", &m_out_endY);
     m_treeOut->Branch("endZ", &m_out_endZ);
+    m_treeOut->Branch("t0", &m_out_t0);
     m_treeOut->Branch("dirX", &m_out_dirX);
     m_treeOut->Branch("dirY", &m_out_dirY);
     m_treeOut->Branch("dirZ", &m_out_dirZ);
@@ -523,6 +526,7 @@ NDRecoOutputData::NDRecoOutputData(const std::string filename)
     m_treeOut->Branch("recoHitY", &m_out_recoHitY);
     m_treeOut->Branch("recoHitZ", &m_out_recoHitZ);
     m_treeOut->Branch("recoHitE", &m_out_recoHitE);
+    m_treeOut->Branch("recoHitT0", &m_out_recoHitT0);
     m_treeOut->Branch("gotMatch", &m_out_gotMatch);
     m_treeOut->Branch("mcPDG", &m_out_mcPDG);
     m_treeOut->Branch("mcId", &m_out_mcId);
@@ -641,6 +645,7 @@ void NDRecoOutputData::ClearData()
     m_out_endX.clear();
     m_out_endY.clear();
     m_out_endZ.clear();
+    m_out_t0.clear();
     m_out_dirX.clear();
     m_out_dirY.clear();
     m_out_dirZ.clear();
@@ -658,6 +663,7 @@ void NDRecoOutputData::ClearData()
     m_out_recoHitY.clear();
     m_out_recoHitZ.clear();
     m_out_recoHitE.clear();
+    m_out_recoHitT0.clear();
     m_out_gotMatch.clear();
     m_out_mcPDG.clear();
     m_out_mcId.clear();
@@ -822,6 +828,7 @@ void NDRecoOutputData::FillBasicBranches(const std::unique_ptr<LArRecoNDFormat> 
     m_out_endX.insert(m_out_endX.end(), inputSpill->m_endX->begin(), inputSpill->m_endX->end());
     m_out_endY.insert(m_out_endY.end(), inputSpill->m_endY->begin(), inputSpill->m_endY->end());
     m_out_endZ.insert(m_out_endZ.end(), inputSpill->m_endZ->begin(), inputSpill->m_endZ->end());
+    m_out_t0.insert(m_out_t0.end(), inputSpill->m_t0->begin(), inputSpill->m_t0->end());
     m_out_dirX.insert(m_out_dirX.end(), inputSpill->m_dirX->begin(), inputSpill->m_dirX->end());
     m_out_dirY.insert(m_out_dirY.end(), inputSpill->m_dirY->begin(), inputSpill->m_dirY->end());
     m_out_dirZ.insert(m_out_dirZ.end(), inputSpill->m_dirZ->begin(), inputSpill->m_dirZ->end());
@@ -839,6 +846,7 @@ void NDRecoOutputData::FillBasicBranches(const std::unique_ptr<LArRecoNDFormat> 
     m_out_recoHitY.insert(m_out_recoHitY.end(), inputSpill->m_recoHitY->begin(), inputSpill->m_recoHitY->end());
     m_out_recoHitZ.insert(m_out_recoHitZ.end(), inputSpill->m_recoHitZ->begin(), inputSpill->m_recoHitZ->end());
     m_out_recoHitE.insert(m_out_recoHitE.end(), inputSpill->m_recoHitE->begin(), inputSpill->m_recoHitE->end());
+    m_out_recoHitT0.insert(m_out_recoHitT0.end(), inputSpill->m_recoHitT0->begin(), inputSpill->m_recoHitT0->end());
     m_out_gotMatch.insert(m_out_gotMatch.end(), inputSpill->m_gotMatch->begin(), inputSpill->m_gotMatch->end());
     m_out_mcPDG.insert(m_out_mcPDG.end(), inputSpill->m_mcPDG->begin(), inputSpill->m_mcPDG->end());
     m_out_mcId.insert(m_out_mcId.end(), inputSpill->m_mcId->begin(), inputSpill->m_mcId->end());
