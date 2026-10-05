@@ -96,7 +96,7 @@
     <algorithm type = "LArListDeletion" description = "3DClusterDeletion">
         <ClusterListNames>Clusters3D</ClusterListNames>
     </algorithm>
-    <algorithm type = "LArBdtVertexSelection">
+    <algorithm type = "LArNDBdtVertexSelection">
         <InputCaloHitListNames>CaloHitListU CaloHitListV CaloHitListW</InputCaloHitListNames>
         <InputClusterListNames>ClustersU ClustersV ClustersW</InputClusterListNames>
         <OutputVertexListName>NeutrinoVertices3D</OutputVertexListName>
