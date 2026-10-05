@@ -1,0 +1,15 @@
+# Hit-selection + merging config for the LArRecoND flow->ROOT converter
+# Pandora decides the prompt/filtered + merge decision, NOT ND_Production. Keep one of these per detector / production config.
+
+# base_hits : which flow hit dataset to start from
+#             'filtered' -> charge/calib_filtered_hits (falls back to
+#                           calib_final_hits then calib_prompt_hits if absent)
+#             'prompt'   -> charge/calib_prompt_hits
+# merge     : whether to merge same-channel hits in the converter (the merger
+#             was removed from ndlar_flow and handed to this step)
+# merge_cut : time window in CRS ticks for merging neighbouring same-channel
+#             hits. MUST match the value the ndlar_flow CalibHitMerger used.
+
+base_hits: filtered
+merge: true
+merge_cut: 65
