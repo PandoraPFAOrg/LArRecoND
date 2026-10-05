@@ -16,6 +16,7 @@
 #include "CheatingRockMuonRemovalAlgorithm.h"
 #include "CheatingRockMuonTaggingTool.h"
 #include "CheatingStitchingTool.h"
+#include "CheatingConfigurableVertexCreationAlgorithm.h"
 
 #include "CandidateVertexCreationThreeDAlgorithm.h"
 #include "CreateTwoDClustersFromThreeDAlgorithm.h"
@@ -44,7 +45,8 @@
     d("LArCutClusterCharacterisationThreeD",    CutClusterCharacterisationThreeDAlgorithm)                                         \
     d("LArCandidateVertexCreationThreeD",       CandidateVertexCreationThreeDAlgorithm)                                            \
     d("LArHierarchyAnalysis",                   HierarchyAnalysisAlgorithm)                                                        \
-    d("LArCheatingRockMuonRemoval",             CheatingRockMuonRemovalAlgorithm)
+    d("LArCheatingRockMuonRemoval",             CheatingRockMuonRemovalAlgorithm)                                                  \
+    d("LArCheatingConfigurableVertexCreation",  CheatingConfigurableVertexCreationAlgorithm)
 
 #define LAR_ND_ALGORITHM_TOOL_LIST(d)                                                                                              \
     d("LArEventSlicingThreeD",                  EventSlicingThreeDTool)                                                            \
