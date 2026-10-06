@@ -203,6 +203,15 @@ void MakePandoraTPC(const pandora::Pandora *const pPrimaryPandora, const Paramet
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 /**
+ *  @brief  Create and register all the detector gaps in Pandora, based on the loaded geometry.
+ *
+ *  @param  pPrimaryPandora The address of the primary pandora instance
+ */
+void LoadDetectorGaps(const pandora::Pandora *const pPrimaryPandora);
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+/**
  *  @brief  Process events using the supplied pandora instance
  *
  *  @param  parameters The application parameters
