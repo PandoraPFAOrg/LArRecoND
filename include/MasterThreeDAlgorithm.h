@@ -40,12 +40,20 @@ protected:
     pandora::StatusCode Run() override;
 
     /**
-     *  @brief  Run the cosmic-ray reconstruction worker instances
+     *  @brief  Copy mc particles in the named input list to the given pandora instance.
      *
-     *  @param  volumeIdToHitListMap the volume id to hit list map
-     *  @param  workerToLArTPCMap the worker id to LArTPC list map
+     *  @param  pPandora the pandora instance to which to copy the mc particles
      */
-    pandora::StatusCode RunCosmicRayReconstruction(const VolumeIdToHitListMap &volumeIdToHitListMap) const;
+    pandora::StatusCode CopyMCParticles(const pandora::Pandora *pPandora) const;
+
+
+    /**
+     * @brief  Run cosmic-ray reconstruction, then recreate the resulting pfos in the current pandora instance.
+     *
+     * @param  volumeIdToHitListMap the LArTPC Volume ID to Hit List Map
+     * @param  pfoToLArTPCMap To receive the mapping from pfos
+     */
+    pandora::StatusCode RunCosmicRayReconstructionThenRecreate(const VolumeIdToHitListMap &volumeIdToHitListMap, PfoToLArTPCMap &pfoToLArTPCMap) const;
 
     /**
      *  @brief  Tag clear, unambiguous cosmic-ray pfos

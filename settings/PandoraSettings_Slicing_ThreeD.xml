@@ -85,6 +85,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>TrackParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <TrackTools>
             <tool type = "LArClearTracks"/>
             <tool type = "LArLongTracks"/>
@@ -104,6 +105,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>TrackParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <TrackTools>
             <tool type = "LArClearLongitudinalTracks"/>
             <tool type = "LArMatchedEndPoints"/>
@@ -115,6 +117,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>TrackParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <TrackTools>
             <tool type = "LArClearTrackFragments"/>
         </TrackTools>
@@ -150,6 +153,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>ShowerParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <ShowerTools>
             <tool type = "LArClearShowers"/>
             <tool type = "LArSplitShowers"/>
@@ -167,6 +171,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>TrackParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <TrackTools>
             <tool type = "LArClearTracks"/>
             <tool type = "LArLongTracks"/>
@@ -186,6 +191,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>TrackParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <TrackTools>
             <tool type = "LArClearLongitudinalTracks"/>
             <tool type = "LArMatchedEndPoints"/>
@@ -197,6 +203,7 @@
         <InputClusterListNameV>ClustersV</InputClusterListNameV>
         <InputClusterListNameW>ClustersW</InputClusterListNameW>
         <OutputPfoListName>TrackParticles3D</OutputPfoListName>
+        <NMaxTensorToolRepeats>100</NMaxTensorToolRepeats>
         <TrackTools>
             <tool type = "LArClearTrackFragments"/>
         </TrackTools>

@@ -14,9 +14,6 @@
 #include "MasterThreeDAlgorithm.h"
 
 #include "larpandoracontent/LArContent.h"
-#include "larpandoracontent/LArHelpers/LArClusterHelper.h"
-#include "larpandoracontent/LArHelpers/LArFileHelper.h"
-#include "larpandoracontent/LArHelpers/LArMCParticleHelper.h"
 #include "larpandoracontent/LArHelpers/LArPfoHelper.h"
 #include "larpandoracontent/LArHelpers/LArStitchingHelper.h"
 
@@ -26,7 +23,7 @@
 #include "larpandoracontent/LArPlugins/LArPseudoLayerPlugin.h"
 #include "larpandoracontent/LArPlugins/LArRotationalTransformationPlugin.h"
 
-#include "larpandoracontent/LArUtility/PfoMopUpBaseAlgorithm.h"
+#include <larpandoracontent/LArControlFlow/MasterAlgorithm.h>
 
 #ifdef LIBTORCH_DL
 #include "larpandoradlcontent/LArDLContent.h"
@@ -45,7 +42,6 @@ MasterThreeDAlgorithm::MasterThreeDAlgorithm() :
 
 StatusCode MasterThreeDAlgorithm::Run()
 {
-
     PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->Reset());
 
     if (!m_workerInstancesInitialized)
@@ -53,19 +49,14 @@ StatusCode MasterThreeDAlgorithm::Run()
         PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->InitializeWorkerInstances(m_workerToLArTPCMap));
     }
 
-    if (m_passMCParticlesToWorkerInstances)
-        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->CopyMCParticles());
-
     PfoToFloatMap stitchedPfosToX0Map;
     VolumeIdToHitListMap volumeIdToHitListMap;
     PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->GetVolumeIdToHitListMap(volumeIdToHitListMap));
 
     if (m_shouldRunAllHitsCosmicReco)
     {
-        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RunCosmicRayReconstruction(volumeIdToHitListMap));
-
         PfoToLArTPCMap pfoToLArTPCMap;
-        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RecreateCosmicRayPfos(pfoToLArTPCMap));
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RunCosmicRayReconstructionThenRecreate(volumeIdToHitListMap, pfoToLArTPCMap));
 
         if (m_shouldRunStitching)
             PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->StitchCosmicRayPfos(pfoToLArTPCMap, stitchedPfosToX0Map));
@@ -84,6 +75,9 @@ StatusCode MasterThreeDAlgorithm::Run()
 
     if (m_shouldRunNeutrinoRecoOption || m_shouldRunCosmicRecoOption)
     {
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->CopyMCParticles(m_pSliceNuWorkerInstance));
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->CopyMCParticles(m_pSliceCRWorkerInstance));
+
         SliceHypotheses nuSliceHypotheses, crSliceHypotheses;
         PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RunSliceReconstruction(sliceVector, nuSliceHypotheses, crSliceHypotheses));
         PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->SelectBestSliceHypotheses(nuSliceHypotheses, crSliceHypotheses));
@@ -135,49 +129,26 @@ StatusCode MasterThreeDAlgorithm::TagCosmicRayPfos(const PfoToFloatMap &stitched
 
     return STATUS_CODE_SUCCESS;
 }
+
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-StatusCode MasterThreeDAlgorithm::RunCosmicRayReconstruction(const VolumeIdToHitListMap &volumeIdToHitListMap) const
+StatusCode MasterThreeDAlgorithm::CopyMCParticles(const Pandora *pPandora) const
 {
-    for (const Pandora *const pCRWorker : m_crWorkerInstances)
-    {
-        const LArTPC &worker_larTPC(pCRWorker->GetGeometry()->GetLArTPC());
-        const unsigned int worker_id = worker_larTPC.GetLArTPCVolumeId();
+    if (!m_passMCParticlesToWorkerInstances)
+        return STATUS_CODE_SUCCESS;
 
-        const auto worker_it = m_workerToLArTPCMap.find(worker_id);
-        if (worker_it == m_workerToLArTPCMap.end())
-        {
-            std::cout << "Problem: worker_id " << worker_id << "not present in the m_workerToLArTPCMap. Skipping this worker.\n";
-            continue;
-        }
+    const MCParticleList *pMCParticleList(nullptr);
+    PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::GetList(*this, m_inputMCParticleListName, pMCParticleList));
+    LArMCParticleFactory mcParticleFactory;
 
-        // loop over worker's TPCs
-        for (const pandora::LArTPC *pLArTPC : worker_it->second)
-        {
-            const unsigned int larTPC_id = (*pLArTPC).GetLArTPCVolumeId();
-
-            // get all TPC's hits
-            VolumeIdToHitListMap::const_iterator iter(volumeIdToHitListMap.find(larTPC_id));
-
-            if (volumeIdToHitListMap.end() == iter)
-                continue;
-
-            // copy hits into the worker
-            std::cout << "Copying " << iter->second.m_allHitList.size() << " hits from LArTPC " << larTPC_id << " to worker " << worker_id << "\n";
-            for (const CaloHit *const pCaloHit : iter->second.m_allHitList)
-                PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->Copy(pCRWorker, pCaloHit));
-        }
-
-        if (m_printOverallRecoStatus)
-            std::cout << "Running cosmic-ray reconstruction worker instance " << worker_id << " of " << m_crWorkerInstances.size() << std::endl;
-
-        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::ProcessEvent(*pCRWorker));
-    }
+    for (const MCParticle *const pMCParticle : *pMCParticleList)
+        PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->Copy(pPandora, pMCParticle, &mcParticleFactory));
 
     return STATUS_CODE_SUCCESS;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
+
 StatusCode MasterThreeDAlgorithm::RunCosmicRayHitRemoval(const PfoList &ambiguousPfos) const
 {
     PfoList allPfosToDelete;
@@ -219,12 +190,67 @@ StatusCode MasterThreeDAlgorithm::RunCosmicRayHitRemoval(const PfoList &ambiguou
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
+StatusCode MasterThreeDAlgorithm::RunCosmicRayReconstructionThenRecreate(const VolumeIdToHitListMap &volumeIdToHitListMap, PfoToLArTPCMap &pfoToLArTPCMap) const
+{
+    unsigned int workerCounter(0);
+
+    for (const Pandora *const pCRWorker : m_crWorkerInstances)
+    {
+        const LArTPC &larTPC(pCRWorker->GetGeometry()->GetLArTPC());
+        const unsigned int workerId = larTPC.GetLArTPCVolumeId();
+        const auto workerIter = m_workerToLArTPCMap.find(workerId);
+
+        if (workerIter == m_workerToLArTPCMap.end())
+        {
+            std::cout << "Problem: worker_id " << workerId << "not present in the m_workerToLArTPCMap. Skipping this worker.\n";
+            continue;
+        }
+
+        // Loop over each of the worker's TPCs
+        for (const pandora::LArTPC *pLArTPC : workerIter->second)
+        {
+            const unsigned int larTPC_id = (*pLArTPC).GetLArTPCVolumeId();
+
+            // Get all TPC's hits
+            VolumeIdToHitListMap::const_iterator iter(volumeIdToHitListMap.find(larTPC_id));
+
+            if (volumeIdToHitListMap.end() == iter)
+                continue;
+
+            // Copy hits into the worker
+            std::cout << "Copying " << iter->second.m_allHitList.size() << " hits from LArTPC " << larTPC_id << " to worker " << workerId << std::endl;
+            for (const CaloHit *const pCaloHit : iter->second.m_allHitList)
+                PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->Copy(pCRWorker, pCaloHit));
+        }
+
+
+        if (m_printOverallRecoStatus)
+            std::cout << "Running cosmic-ray reconstruction worker instance " << ++workerCounter << " of " << m_crWorkerInstances.size() << std::endl;
+
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->CopyMCParticles(pCRWorker));
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::ProcessEvent(*pCRWorker));
+
+        const PfoList *pCRPfos(nullptr);
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::GetCurrentPfoList(*pCRWorker, pCRPfos));
+
+        PfoList newPfoList;
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, MasterAlgorithm::Recreate(*pCRPfos, newPfoList));
+
+        for (const Pfo *const pNewPfo : newPfoList)
+            pfoToLArTPCMap[pNewPfo] = &larTPC;
+
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::Reset(*pCRWorker));
+    }
+
+    return STATUS_CODE_SUCCESS;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
 StatusCode MasterThreeDAlgorithm::RunSlicing(const VolumeIdToHitListMap &volumeIdToHitListMap, SliceVector &sliceVector) const
 {
-    std::cout << "There are " << volumeIdToHitListMap.size() << " volumes" << std::endl;
     for (const VolumeIdToHitListMap::value_type &mapEntry : volumeIdToHitListMap)
     {
-        std::cout << "- Volume has " << mapEntry.second.m_allHitList.size() << " hits" << std::endl;
         for (const CaloHit *const pCaloHit : (m_shouldRemoveOutOfTimeHits ? mapEntry.second.m_truncatedHitList : mapEntry.second.m_allHitList))
         {
             if (!PandoraContentApi::IsAvailable(*this, pCaloHit))
@@ -249,6 +275,7 @@ StatusCode MasterThreeDAlgorithm::RunSlicing(const VolumeIdToHitListMap &volumeI
             std::cout << "Running slicing worker instance" << std::endl;
 
         const PfoList *pSlicePfos(nullptr);
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->CopyMCParticles(m_pSlicingWorkerInstance));
         PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::ProcessEvent(*m_pSlicingWorkerInstance));
         PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::GetCurrentPfoList(*m_pSlicingWorkerInstance, pSlicePfos));
 
@@ -601,6 +628,7 @@ StatusCode MasterThreeDAlgorithm::GetVolumeIdToHitListMap(VolumeIdToHitListMap &
 
     const CaloHitList *pCaloHitList(nullptr);
     PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::GetList(*this, m_inputHitListName, pCaloHitList));
+    std::map<HitType, std::pair<unsigned int, unsigned int>> hitTypeToStatusMap;
 
     for (const CaloHit *const pCaloHit : *pCaloHitList)
     {
@@ -619,11 +647,21 @@ StatusCode MasterThreeDAlgorithm::GetVolumeIdToHitListMap(VolumeIdToHitListMap &
                 (pCaloHit->GetPositionVector().GetX() <= (pLArTPC->GetCenterX() + 0.5f * pLArTPC->GetWidthX()))))
         {
             larTPCHitList.m_truncatedHitList.push_back(pCaloHit);
+            hitTypeToStatusMap[pCaloHit->GetHitType()].first++;
         }
         else
-            std::cout << "Hit of type " << pCaloHit->GetHitType() << " outside TPC " << volumeId << "? "
-                      << pCaloHit->GetPositionVector().GetX() << ", " << pLArTPC->GetCenterX() - 0.5f * pLArTPC->GetWidthX() << ", "
-                      << pLArTPC->GetCenterX() + 0.5f * pLArTPC->GetWidthX() << std::endl;
+            hitTypeToStatusMap[pCaloHit->GetHitType()].second++;
+    }
+
+    if (m_printOverallRecoStatus)
+    {
+        for (const auto &hitTypeToStatusMapEntry : hitTypeToStatusMap)
+        {
+            const HitType hitType(hitTypeToStatusMapEntry.first);
+            const unsigned int nInTimeHits(hitTypeToStatusMapEntry.second.first);
+            const unsigned int nOutOfTimeHits(hitTypeToStatusMapEntry.second.second);
+            std::cout << "Hit type " << hitType << ": " << nInTimeHits << " hits in TPC, " << nOutOfTimeHits << " hits outside of the TPC" << std::endl;
+        }
     }
 
     return STATUS_CODE_SUCCESS;

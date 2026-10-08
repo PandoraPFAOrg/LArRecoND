@@ -114,7 +114,9 @@ StatusCode SimpleClusterCreationThreeDAlgorithm::CreateClusters(const CaloHitLis
 
     std::vector<PandoraContentApi::Cluster::Parameters> clusters3D;
 
-    std::cout << "Making clusters from " << caloHitVector.size() << " 3D hits" << std::endl;
+    if (PandoraContentApi::GetSettings(*this)->ShouldDisplayAlgorithmInfo())
+        std::cout << "SimpleClusterCreationThreeDAlgorithm: Making clusters from " << caloHitVector.size() << " 3D hits" << std::endl;
+
     for (const CaloHit *const pSeedCaloHit : caloHitVector)
     {
         if (vetoList.count(pSeedCaloHit))

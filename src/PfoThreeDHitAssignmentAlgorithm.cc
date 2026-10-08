@@ -35,8 +35,6 @@ pandora::StatusCode PfoThreeDHitAssignmentAlgorithm::Run()
     if (PandoraContentApi::GetSettings(*this)->ShouldDisplayAlgorithmInfo())
         std::cout << "----> Running Algorithm: " << this->GetInstanceName() << ", " << this->GetType() << std::endl;
 
-    std::cout << "Running 3D hit assignment" << std::endl;
-
     const CaloHitList *pCaloHits3D{nullptr};
     PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::GetList(*this, m_inputCaloHitList3DName, pCaloHits3D));
 
@@ -274,13 +272,11 @@ void PfoThreeDHitAssignmentAlgorithm::AddHitsToPfo(const ParticleFlowObject *pPf
 
         PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::SaveList<Cluster>(*this, listName));
         PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::AddToPfo(*this, pPfo, pCluster3D));
-        std::cout << "Pfo " << pPfo << ": created cluster " << pCluster3D << " with " << hits.size() << " hits" << std::endl;
     }
     else if (1 == nClusters)
     {
         const Cluster *const pCluster3D = *(clusters3D.begin());
         PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::AddToCluster(*this, pCluster3D, &hits));
-        std::cout << "Pfo " << pPfo << ": added " << hits.size() << " hits to existing cluster " << pCluster3D << std::endl;
     }
     else
         throw StatusCodeException(STATUS_CODE_FAILURE);
