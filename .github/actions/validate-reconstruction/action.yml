@@ -1,0 +1,86 @@
+name: Validate Reconstruction Output
+description: Validate one dataset result and upload its plots/status/ROOT debug output
+
+inputs:
+  dataset-id:
+    description: Stable matrix dataset identifier
+    required: true
+  dataset-name:
+    description: Human-readable matrix dataset name
+    required: true
+  binary-outcome:
+    description: Outcome of the PandoraInterface step
+    required: true
+  job-outcome:
+    description: Outcome of the calling matrix job
+    required: true
+  is-pull-request:
+    description: Whether to upload artifacts for a pull request
+    required: true
+  reference-file:
+    description: Path to the reference ROOT file for validation
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Validate Output and Plot Distributions
+      id: validate-output
+      if: inputs.binary-outcome != 'skipped'
+      shell: bash -l {0}
+      env:
+        REFERENCE_FILE: ${{ inputs.reference-file }}
+      run: |
+        EXTRA_ARGS=()
+        if [[ -n "$REFERENCE_FILE" && -f "$REFERENCE_FILE" ]]; then
+          EXTRA_ARGS=(--reference "$REFERENCE_FILE")
+        fi
+
+        python3 "$GITHUB_WORKSPACE/validation/ciRecoValidation.py" \
+          --input /pandora/data/LArRecoND.root \
+          "${EXTRA_ARGS[@]}" \
+          --dataset-id "${{ inputs.dataset-id }}" \
+          --dataset-name "${{ inputs.dataset-name }}" \
+          --output-dir "$RUNNER_TEMP/reco-validation"
+
+    - name: Collect Status and ROOT Debug Output
+      if: always()
+      shell: bash
+      env:
+        DATASET_ID: ${{ inputs.dataset-id }}
+        DATASET_NAME: ${{ inputs.dataset-name }}
+        JOB_OUTCOME: ${{ inputs.job-outcome }}
+        BINARY_OUTCOME: ${{ inputs.binary-outcome }}
+        VALIDATION_OUTCOME: ${{ steps.validate-output.outcome }}
+      run: |
+        output_dir="$RUNNER_TEMP/reco-validation"
+        mkdir -p "$output_dir"
+
+        root_file=""
+        if [[ -s /pandora/data/LArRecoND.root ]]; then
+          root_file="${DATASET_ID}-LArRecoND.root"
+          cp /pandora/data/LArRecoND.root "$output_dir/$root_file"
+        fi
+
+        jq -n \
+          --arg dataset_id "$DATASET_ID" \
+          --arg dataset_name "$DATASET_NAME" \
+          --arg job_outcome "${JOB_OUTCOME:-failure}" \
+          --arg binary_outcome "${BINARY_OUTCOME:-skipped}" \
+          --arg validation_outcome "${VALIDATION_OUTCOME:-skipped}" \
+          --arg root_file "$root_file" \
+          '{dataset_id: $dataset_id, dataset_name: $dataset_name,
+            job_outcome: $job_outcome, binary_outcome: $binary_outcome,
+            validation_outcome: $validation_outcome,
+            root_file: (if $root_file == "" then null else $root_file end)}' \
+          > "$output_dir/${DATASET_ID}-status.json"
+
+    - name: Upload Reconstruction Debug Artifacts
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: reco-validation-${{ inputs.dataset-id }}
+        path: ${{ runner.temp }}/reco-validation
+        if-no-files-found: error
+        retention-days: 90

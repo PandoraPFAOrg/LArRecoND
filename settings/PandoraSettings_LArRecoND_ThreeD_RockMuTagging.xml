@@ -31,23 +31,21 @@
           </tool>
         </StitchingTools>
         <CosmicRayTaggingTools>
-            <tool type = "LArCosmicRayTagging">
-	      <CutMode>cautious</CutMode>
-	    </tool>
+          <tool type = "LArCosmicRayTagging">
+            <CutMode>cautious</CutMode>
+          </tool>
         </CosmicRayTaggingTools>
-	<RockMuonTaggingTools>
-	  <tool type = "LArRockMuonTagging">
-	    <MarginX>5</MarginX>
-	    <MarginY>5</MarginY>
-	    <MarginZ>5</MarginZ>
-	  </tool>
-	</RockMuonTaggingTools>
+        <RockMuonTaggingTools>
+          <tool type = "LArRockMuonTagging">
+            <MarginX>5</MarginX>
+            <MarginY>5</MarginY>
+            <MarginZ>5</MarginZ>
+          </tool>
+        </RockMuonTaggingTools>
         <SliceIdTools>
             <tool type = "LArSimpleNeutrinoId"/>
         </SliceIdTools>
         <InputHitListName>Input</InputHitListName>
-        <InputMCParticleListName>Input</InputMCParticleListName>
-        <PassMCParticlesToWorkerInstances>true</PassMCParticlesToWorkerInstances>
         <RecreatedPfoListName>RecreatedPfos</RecreatedPfoListName>
         <RecreatedClusterListName>RecreatedClusters</RecreatedClusterListName>
         <RecreatedVertexListName>RecreatedVertices</RecreatedVertexListName>
@@ -57,32 +55,31 @@
 
     <algorithm type = "LArHierarchyAnalysis">
         <EventFileName>LArRecoNDInput.root</EventFileName>
-	<EventTreeName>events</EventTreeName>
-	<EventLeafName>event</EventLeafName>
-	<RunLeafName>run</RunLeafName>
-	<SubRunLeafName>subrun</SubRunLeafName>
-	<UnixTimeLeafName>unix_ts</UnixTimeLeafName>
-	<StartTimeLeafName>event_start_t</StartTimeLeafName>
-	<EndTimeLeafName>event_end_t</EndTimeLeafName>
-	<MCIdLeafName>mcp_id</MCIdLeafName>
-	<MCLocalIdLeafName>mcp_idLocal</MCLocalIdLeafName>
-	<EventsToSkip>0</EventsToSkip>
-	<MinHitsToSkip>2</MinHitsToSkip>
-	<CaloHitListName>CaloHitList2D</CaloHitListName>
-	<PfoListName>RecreatedPfos</PfoListName>
+        <EventTreeName>events</EventTreeName>
+        <EventLeafName>event</EventLeafName>
+        <RunLeafName>run</RunLeafName>
+        <SubRunLeafName>subrun</SubRunLeafName>
+        <UnixTimeLeafName>unix_ts</UnixTimeLeafName>
+        <StartTimeLeafName>event_start_t</StartTimeLeafName>
+        <EndTimeLeafName>event_end_t</EndTimeLeafName>
+        <MCIdLeafName>mcp_id</MCIdLeafName>
+        <MCLocalIdLeafName>mcp_idLocal</MCLocalIdLeafName>
+        <EventsToSkip>0</EventsToSkip>
+        <MinHitsToSkip>2</MinHitsToSkip>
+        <CaloHitListName>CaloHitList2D</CaloHitListName>
+        <PfoListName>RecreatedPfos</PfoListName>
         <AnalysisFileName>LArRecoND.root</AnalysisFileName>
         <AnalysisTreeName>LArRecoND</AnalysisTreeName>
         <FoldToPrimaries>true</FoldToPrimaries>
         <FoldToLeadingShowers>false</FoldToLeadingShowers>
-	<FoldDynamic>false</FoldDynamic>
+        <FoldDynamic>false</FoldDynamic>
         <MinPurity>0.5</MinPurity>
         <MinCompleteness>0.1</MinCompleteness>
         <MinRecoHits>15</MinRecoHits>
         <MinRecoHitsPerView>5</MinRecoHitsPerView>
         <MinRecoGoodViews>2</MinRecoGoodViews>
         <RemoveRecoNeutrons>true</RemoveRecoNeutrons>
-	<SelectRecoHits>true</SelectRecoHits>
+        <SelectRecoHits>true</SelectRecoHits>
     </algorithm>
 
 </pandora>
-

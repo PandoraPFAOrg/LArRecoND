@@ -1,0 +1,94 @@
+# Split Workflow for PR Reporting and Cleanup
+#
+# Essentially, this workflow is triggered when the "Build LArRecoND" workflow
+# completes successfully for a pull request. It downloads the validation
+# artifacts, aggregates them, and posts a comment on the PR with the results.
+# Finally, it cleans up any workflow artifacts that are no longer needed.
+#
+# This is needed, as the PRs don't have enough permissions to do this
+# themselves, whereas this workflow runs with the permissions of the repository,
+# allowing it to post comments and delete artifacts.
+
+name: PR Report and Cleanup
+
+on:
+  workflow_run:
+    workflows: ["Build LArRecoND"]
+    types:
+      - completed
+
+jobs:
+  report_and_cleanup:
+    runs-on: ubuntu-latest
+    if: >
+      github.repository_owner == 'PandoraPFAOrg' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout LArRecoND Repository
+        uses: actions/checkout@v7
+
+      # Download the artifact from the PR that triggered this workflow run. This
+      # artifact contains the PR number.
+      - name: Download PR Number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            let matchArtifact = allArtifacts.data.artifacts.find((a) => a.name == "pr-number");
+            let download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/pr-number.zip`, Buffer.from(download.data));
+
+      # Now, we can extract the PR number from the downloaded artifact and set
+      # it as an environment variable for the next step.
+      - name: Extract PR Number
+        run: |
+          unzip pr-number.zip
+          echo "PR_NUMBER=$(cat pr_number.txt)" >> $GITHUB_ENV
+
+      # Run the report-result action to aggregate the validation artifacts and
+      # add/update a PR comment, using the PR number we just extracted.
+      - name: Update PR Reconstruction Report
+        uses: ./.github/actions/report-result
+        with:
+          pull-request-number: ${{ env.PR_NUMBER }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Clean up the workflow artifacts for this PR.
+      - name: Delete workflow artifacts
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fetching artifacts for the triggering workflow run..."
+          ARTIFACTS=$(gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts --jq '.artifacts[] | [.id, .name] | @tsv')
+
+          if [ -z "$ARTIFACTS" ]; then
+            echo "No artifacts found to delete."
+            exit 0
+          fi
+
+          echo "Found workflow artifacts."
+          while IFS=$'\t' read -r ARTIFACT_ID ARTIFACT_NAME; do
+            if [[ "$ARTIFACT_NAME" == reco-validation-* ]]; then
+              echo "Preserving validation plot artifact: $ARTIFACT_NAME"
+              continue
+            fi
+            echo "Deleting artifact with ID: $ARTIFACT_ID"
+            gh api --method DELETE /repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID
+          done <<< "$ARTIFACTS"

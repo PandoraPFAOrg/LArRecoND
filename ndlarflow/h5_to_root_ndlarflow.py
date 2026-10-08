@@ -178,7 +178,7 @@ def main(argv=None):
                 for key in other_dict.keys():
                     event_dict[key] = awk.values_astype(awk.Array([other_dict[key][first:last]]),other_dict[key].dtype)
                 fout = ur.recreate(outname)
-                fout['subevents'] = event_dict
+                fout.mktree('subevents', event_dict)
                 isWritten=True
         else:
             nSubEvents = int(max_entries/MaxArrayDepth)+1
@@ -189,7 +189,7 @@ def main(argv=None):
                 for key in other_dict.keys():
                     event_dict[key] = awk.values_astype(awk.Array([other_dict[key][first:last]]),other_dict[key].dtype)
                 fout = ur.recreate(outname)
-                fout['subevents'] = event_dict
+                fout.mktree('subevents', event_dict)
                 isWritten=True
             del packetFrac
             del particleID
@@ -489,7 +489,7 @@ def main(argv=None):
                     if isWritten==False:
                         print('TAKE NOTE! I thought I should have already made the output file by now, but I have "isWritten" as False, so I am attempting to create the output file.')
                         fout = ur.recreate(outname)
-                        fout['subevents'] = event_dict
+                        fout.mktree('subevents', event_dict)
                         isWritten=True
                     else:
                         fout['subevents'].extend(event_dict)
@@ -504,7 +504,7 @@ def main(argv=None):
                     if isWritten==False:
                         print('TAKE NOTE! I thought I should have already made the output file by now, but I have "isWritten" as False, so I am attempting to create the output file.')
                         fout = ur.recreate(outname)
-                        fout['subevents'] = event_dict
+                        fout.mktree('subevents', event_dict)
                         isWritten=True
                     else:
                         fout['subevents'].extend(event_dict)

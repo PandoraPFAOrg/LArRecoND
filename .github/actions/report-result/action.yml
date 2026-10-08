@@ -1,0 +1,127 @@
+name: Report Reconstruction Results
+description: Aggregate matrix validation artifacts and update one PR comment with inline plots
+
+inputs:
+  pull-request-number:
+    description: Pull request number to comment on
+    required: true
+  github-token:
+    description: Token used by gh pr comment
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare Report Directory
+      shell: bash
+      run: mkdir -p reco-validation
+
+    - name: Download Matrix Reports
+      uses: actions/download-artifact@v8
+      continue-on-error: true
+      with:
+        pattern: reco-validation-*
+        path: reco-validation
+        merge-multiple: true
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ inputs.github-token }}
+
+    - name: Setup CML
+      uses: iterative/setup-cml@v2
+
+    - name: Publish Images
+      shell: bash
+      env:
+        REPO_TOKEN: ${{ inputs.github-token }}
+      run: |
+        # Upload the distribution plots to the PR using CML, storing the links.
+        for img in reco-validation/*.png; do
+          if [[ -f "$img" ]]; then
+            cml publish "$img" --md >> "${img}.md"
+          fi
+        done
+
+    - name: Prepare PR Comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- lard-reco-ci-validation -->';
+          const statusFiles = fs.readdirSync('reco-validation')
+            .filter((file) => file.endsWith('-status.json'))
+            .sort();
+          const results = statusFiles.map((file) => {
+            const status = JSON.parse(fs.readFileSync(`reco-validation/${file}`, 'utf8'));
+            const summaryFile = `reco-validation/${status.dataset_id}.json`;
+            const summary = fs.existsSync(summaryFile)
+              ? JSON.parse(fs.readFileSync(summaryFile, 'utf8'))
+              : null;
+            return { name: status.dataset_name, status, summary };
+          });
+
+          const outcome = (value) => value || 'not run';
+          const fmt = (value) => value === null || value === undefined
+            ? '-'
+            : value.toLocaleString('en-US', { maximumFractionDigits: 3 });
+          const statsRow = (label, stats) =>
+            `| ${label} | ${fmt(stats.count)} | ${fmt(stats.min)} | ${fmt(stats.max)} | ${fmt(stats.mean)} ± ${fmt(stats.std)} | ${fmt(stats.median)} |`;
+
+          const sections = results.map(({ name, status, summary }) => {
+            const lines = [
+              `## ${name}`,
+              '',
+              `Job: ${outcome(status.job_outcome)} · PandoraInterface: ${outcome(status.binary_outcome)} · ` +
+                `Output validation: ${outcome(status.validation_outcome)} · ROOT file: ${status.root_file ? 'available' : 'missing'}`,
+              '',
+            ];
+
+            if (!summary) {
+              return [...lines, 'No validation results were produced.', ''].join('\n');
+            }
+
+            // Read any markdown plot links associated with this dataset.
+            const plotFiles = fs.readdirSync('reco-validation')
+              .filter((file) => file.startsWith(status.dataset_id) && file.endsWith('.png.md'))
+              .sort();
+            const plotsMd = plotFiles.map((file) => fs.readFileSync(`reco-validation/${file}`, 'utf8')).join('\n\n');
+
+            return [
+              ...lines,
+              `Events: ${fmt(summary.entries)} · Reconstructed PFPs (\`clusterId\`): ${fmt(summary.pfp_total)}`,
+              '',
+              '| Branch | Count | Min | Max | Mean ± Std | Median |',
+              '| --- | ---: | ---: | ---: | ---: | ---: |',
+              statsRow('PFPs per event', summary.event_stats),
+              ...summary.branch_stats.map((stats) => statsRow(`\`${stats.branch}\``, stats)),
+              '',
+              plotsMd,
+            ].join('\n');
+          });
+
+          const commit = context.payload.workflow_run.head_sha;
+          const timestamp = new Date().toISOString();
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.payload.workflow_run.id}`;
+
+          const body = [
+            marker,
+            '# LArRecoND PR Validation',
+            '',
+            ...(sections.length > 0 ? sections : ['No dataset results were uploaded.', '']),
+            `[Download plots and ROOT output (seven-day artifacts)](${runUrl}#artifacts)`,
+            '',
+            `Commit: \`${commit}\`  `,
+            `Generated: ${timestamp} UTC`,
+          ].join('\n');
+
+          fs.writeFileSync('reco-validation/comment.md', body);
+
+    - name: Update Single PR Comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ inputs.pull-request-number }}
+      run: |
+        gh pr comment "$PR_NUMBER" \
+          --repo "$GITHUB_REPOSITORY" \
+          --edit-last --create-if-none \
+          --body-file reco-validation/comment.md

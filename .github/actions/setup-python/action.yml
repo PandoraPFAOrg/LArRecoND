@@ -1,0 +1,51 @@
+name: "Setup Python"
+description: "Sets up Python environment"
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Get h5flow
+      shell: bash -l {0}
+      run: |
+        git clone https://github.com/DUNE/h5flow.git
+
+    - name: Setup Conda
+      uses: conda-incubator/setup-miniconda@v4
+      env:
+        CC: mpicc
+        HDF5_MPI: "ON"
+      with:
+        auto-update-conda: true
+        python-version: "3.11"
+
+    - name: Cache Conda Environment
+      uses: actions/cache@v6
+      with:
+        path: ~/miniconda/envs
+        key: conda-env-${{ runner.os }}-py311-${{ hashFiles('**/action.yml') }}
+        restore-keys: |
+          conda-env-${{ runner.os }}-py311-
+
+    - name: Install Conda Packages
+      shell: bash -l {0}
+      env:
+        CC: mpicc
+        HDF5_MPI: "ON"
+      run: |
+        # Enable conda-forge channel
+        conda config --add channels conda-forge
+        # Install necessary packages (only if not cached)
+        conda install -y c-compiler cxx-compiler mpi4py hdf5=*=*mpi_mpich* h5py=*=*mpi_mpich* pyyaml pip \
+          tqdm scipy scikit-image scikit-learn numpy matplotlib pandas awkward uproot
+
+    - name: Install Pip Packages
+      shell: bash -l {0}
+      env:
+        CC: mpicc
+        HDF5_MPI: "ON"
+      run: |
+        # Then h5flow
+        cd h5flow
+        conda env update --file environment.yml
+        pip install .

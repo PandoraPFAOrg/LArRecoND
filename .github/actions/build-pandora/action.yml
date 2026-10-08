@@ -1,0 +1,52 @@
+name: "Build Pandora Software Stack"
+description: "Builds Pandora stack using the native Alma9-style script with CI dependency setup"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare Pandora Workspace
+      shell: bash
+      run: |
+        rm -rf /pandora/LArRecoND
+        cp -r $GITHUB_WORKSPACE /pandora/LArRecoND
+        chmod +x /pandora/LArRecoND/scripts/build/build.sh
+
+    - name: Define Environment
+      shell: bash
+      run: |
+        rm -f /pandora/setup.sh
+        echo 'source /pandora/root/bin/thisroot.sh' >> /pandora/setup.sh
+        echo 'export PANDORA_PROJECT_DIR=/pandora' >> /pandora/setup.sh
+        echo 'export MY_TEST_AREA=/pandora' >> /pandora/setup.sh
+        echo 'export TORCH_PREFIX=/pandora/libtorch' >> /pandora/setup.sh
+        echo 'export CMAKE_PREFIX_PATH=/pandora/libtorch:$CMAKE_PREFIX_PATH' >> /pandora/setup.sh
+        echo 'export FW_SEARCH_PATH=/pandora/LArRecoND/settings' >> /pandora/setup.sh
+        echo 'export FW_SEARCH_PATH=$FW_SEARCH_PATH:/pandora/LArMachineLearningData/' >> /pandora/setup.sh
+
+    - name: Build Pandora Stack
+      shell: bash
+      run: |
+        source /pandora/setup.sh
+        bash /pandora/LArRecoND/scripts/build/build.sh
+
+    - name: Generate ML Data Cache Key
+      id: ml-cache-key
+      shell: bash
+      run: |
+        ML_COMMIT=$(git -C /pandora/LArMachineLearningData rev-parse HEAD)
+        echo "key=ml-data-${{ runner.os }}-${ML_COMMIT}-dune-dunend" >> "$GITHUB_OUTPUT"
+
+    - name: ML Data Cache
+      id: ml-cache
+      uses: actions/cache@v6
+      with:
+        path: /pandora/LArMachineLearningData
+        key: ${{ steps.ml-cache-key.outputs.key }}
+
+    - name: Download ML Data
+      shell: bash
+      if: steps.ml-cache.outputs.cache-hit != 'true'
+      run: |
+        source /pandora/setup.sh
+        cd /pandora/LArMachineLearningData
+        source download.sh "dune" "dunend"
