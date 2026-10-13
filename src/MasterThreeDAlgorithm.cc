@@ -356,33 +356,23 @@ const Pandora *MasterThreeDAlgorithm::CreateWorkerInstance(
     this->AppendReadoutVolumeParameters(larTPC, 0, larTPCParameters.m_readoutVolumeParametersVector);
     PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::Geometry::LArTPC::Create(*pPandora, larTPCParameters));
 
-    const float tpcMinX(larTPC.GetCenterX() - 0.5f * larTPC.GetWidthX()), tpcMaxX(larTPC.GetCenterX() + 0.5f * larTPC.GetWidthX());
-
     // The Gaps
     for (const DetectorGap *const pGap : gapList)
     {
-        const LineGap *const pLineGap(dynamic_cast<const LineGap *>(pGap));
+        const BoxGap *const pBoxGap( dynamic_cast<const BoxGap *>(pGap) );
 
-        if (pLineGap &&
-            (((pLineGap->GetLineEndX() >= tpcMinX) && (pLineGap->GetLineEndX() <= tpcMaxX)) ||
-                ((pLineGap->GetLineStartX() >= tpcMinX) && (pLineGap->GetLineStartX() <= tpcMaxX))))
+        if ((pBoxGap) &&
+            (pBoxGap->GetSide1().GetX() < larTPC.GetWidthX()) &&
+            (pBoxGap->GetSide2().GetY() <= larTPC.GetWidthY()) &&
+            (pBoxGap->GetSide3().GetZ() < larTPC.GetWidthZ()))
         {
-            PandoraApi::Geometry::LineGap::Parameters lineGapParameters;
-            const LineGapType lineGapType(pLineGap->GetLineGapType());
-            lineGapParameters.m_lineGapType = lineGapType;
-            lineGapParameters.m_lineStartX = pLineGap->GetLineStartX();
-            lineGapParameters.m_lineEndX = pLineGap->GetLineEndX();
+            PandoraApi::Geometry::BoxGap::Parameters boxGapParameters;
+            boxGapParameters.m_side1 = pBoxGap->GetSide1();
+            boxGapParameters.m_side2 = pBoxGap->GetSide2();
+            boxGapParameters.m_side3 = pBoxGap->GetSide3();
+            boxGapParameters.m_vertex = pBoxGap->GetVertex();
 
-            if (m_fullWidthCRWorkerWireGaps &&
-                ((lineGapType == TPC_WIRE_GAP_VIEW_U) || (lineGapType == TPC_WIRE_GAP_VIEW_V) || (lineGapType == TPC_WIRE_GAP_VIEW_W)))
-            {
-                lineGapParameters.m_lineStartX = -std::numeric_limits<float>::max();
-                lineGapParameters.m_lineEndX = std::numeric_limits<float>::max();
-            }
-
-            lineGapParameters.m_lineStartZ = pLineGap->GetLineStartZ();
-            lineGapParameters.m_lineEndZ = pLineGap->GetLineEndZ();
-            PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::Geometry::LineGap::Create(*pPandora, lineGapParameters));
+            PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::Geometry::BoxGap::Create(*pPandora, boxGapParameters));
         }
     }
 
@@ -481,17 +471,17 @@ const Pandora *MasterThreeDAlgorithm::CreateWorkerInstance(const LArTPCMap &larT
     // The Gaps
     for (const DetectorGap *const pGap : gapList)
     {
-        const LineGap *const pLineGap(dynamic_cast<const LineGap *>(pGap));
+        const BoxGap *const pBoxGap( dynamic_cast<const BoxGap *>(pGap) );
 
-        if (pLineGap)
+        if (pBoxGap)
         {
-            PandoraApi::Geometry::LineGap::Parameters lineGapParameters;
-            lineGapParameters.m_lineGapType = pLineGap->GetLineGapType();
-            lineGapParameters.m_lineStartX = pLineGap->GetLineStartX();
-            lineGapParameters.m_lineEndX = pLineGap->GetLineEndX();
-            lineGapParameters.m_lineStartZ = pLineGap->GetLineStartZ();
-            lineGapParameters.m_lineEndZ = pLineGap->GetLineEndZ();
-            PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::Geometry::LineGap::Create(*pPandora, lineGapParameters));
+            PandoraApi::Geometry::BoxGap::Parameters boxGapParameters;
+            boxGapParameters.m_side1 = pBoxGap->GetSide1();
+            boxGapParameters.m_side2 = pBoxGap->GetSide2();
+            boxGapParameters.m_side3 = pBoxGap->GetSide3();
+            boxGapParameters.m_vertex = pBoxGap->GetVertex();
+
+            PANDORA_THROW_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::Geometry::BoxGap::Create(*pPandora, boxGapParameters));
         }
     }
 

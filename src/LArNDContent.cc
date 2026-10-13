@@ -30,6 +30,7 @@
 #include "ReplaceHitAndClusterListsAlgorithm.h"
 #include "SimpleClusterCreationThreeDAlgorithm.h"
 #include "SlicingThreeDAlgorithm.h"
+#include "gaps/LArNDCrossGapsExtensionAlgorithm.h"
 
 // clang-format off
 #define LAR_ND_ALGORITHM_LIST(d)                                                                                                   \
@@ -43,6 +44,7 @@
     d("LArPreProcessingThreeD",                 PreProcessingThreeDAlgorithm)                                                      \
     d("LArCutClusterCharacterisationThreeD",    CutClusterCharacterisationThreeDAlgorithm)                                         \
     d("LArCandidateVertexCreationThreeD",       CandidateVertexCreationThreeDAlgorithm)                                            \
+    d("LArNDCrossGapsExtension",                LArNDCrossGapsExtensionAlgorithm)                                                  \
     d("LArHierarchyAnalysis",                   HierarchyAnalysisAlgorithm)                                                        \
     d("LArCheatingRockMuonRemoval",             CheatingRockMuonRemovalAlgorithm)
 
