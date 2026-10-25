@@ -63,6 +63,8 @@ public:
     Int_t m_trigger;
     std::vector<int> *m_sliceID = nullptr;
     std::vector<int> *m_clusterID = nullptr;
+    std::vector<int> *m_clusterParentID = nullptr;
+    std::vector<int> *m_nClusterParents = nullptr;
     std::vector<float> *m_nuVtxX = nullptr;
     std::vector<float> *m_nuVtxY = nullptr;
     std::vector<float> *m_nuVtxZ = nullptr;
@@ -137,6 +139,8 @@ public:
     TBranch *m_b_trigger = nullptr;
     TBranch *m_b_sliceID = nullptr;
     TBranch *m_b_clusterID = nullptr;
+    TBranch *m_b_clusterParentID = nullptr;
+    TBranch *m_b_nClusterParents = nullptr;
     TBranch *m_b_nuVtxX = nullptr;
     TBranch *m_b_nuVtxY = nullptr;
     TBranch *m_b_nuVtxZ = nullptr;
@@ -264,6 +268,8 @@ void LArRecoNDFormat::Init(TTree *tree)
     m_fChain->SetBranchAddress("triggers", &m_trigger, &m_b_trigger);
     m_fChain->SetBranchAddress("sliceId", &m_sliceID, &m_b_sliceID);
     m_fChain->SetBranchAddress("clusterId", &m_clusterID, &m_b_clusterID);
+    m_fChain->SetBranchAddress("clusterParentId", &m_clusterParentID, &m_b_clusterParentID);
+    m_fChain->SetBranchAddress("nClusterParents", &m_nClusterParents, &m_b_nClusterParents);
     m_fChain->SetBranchAddress("nuVtxX", &m_nuVtxX, &m_b_nuVtxX);
     m_fChain->SetBranchAddress("nuVtxY", &m_nuVtxY, &m_b_nuVtxY);
     m_fChain->SetBranchAddress("nuVtxZ", &m_nuVtxZ, &m_b_nuVtxZ);

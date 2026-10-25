@@ -317,6 +317,8 @@ private:
     Int_t m_out_trigger;
     std::vector<int> m_out_sliceID;
     std::vector<int> m_out_clusterID;
+    std::vector<int> m_out_clusterParentID;
+    std::vector<int> m_out_nClusterParents;
     std::vector<float> m_out_nuVtxX;
     std::vector<float> m_out_nuVtxY;
     std::vector<float> m_out_nuVtxZ;
@@ -490,6 +492,8 @@ NDRecoOutputData::NDRecoOutputData(const std::string filename)
     m_treeOut->Branch("triggers", &m_out_trigger);
     m_treeOut->Branch("sliceId", &m_out_sliceID);
     m_treeOut->Branch("clusterId", &m_out_clusterID);
+    m_treeOut->Branch("clusterParentId", &m_out_clusterParentID);
+    m_treeOut->Branch("nClusterParents", &m_out_nClusterParents);
     m_treeOut->Branch("nuVtxX", &m_out_nuVtxX);
     m_treeOut->Branch("nuVtxY", &m_out_nuVtxY);
     m_treeOut->Branch("nuVtxZ", &m_out_nuVtxZ);
@@ -626,6 +630,8 @@ void NDRecoOutputData::ClearData()
     m_out_trigger = 0;
     m_out_sliceID.clear();
     m_out_clusterID.clear();
+    m_out_clusterParentID.clear();
+    m_out_nClusterParents.clear();
     m_out_nuVtxX.clear();
     m_out_nuVtxY.clear();
     m_out_nuVtxZ.clear();
@@ -808,6 +814,8 @@ void NDRecoOutputData::FillBasicBranches(const std::unique_ptr<LArRecoNDFormat> 
     m_out_trigger = inputSpill->m_trigger;
     m_out_sliceID.insert(m_out_sliceID.end(), inputSpill->m_sliceID->begin(), inputSpill->m_sliceID->end());
     m_out_clusterID.insert(m_out_clusterID.end(), inputSpill->m_clusterID->begin(), inputSpill->m_clusterID->end());
+    m_out_clusterParentID.insert(m_out_clusterParentID.end(), inputSpill->m_clusterParentID->begin(), inputSpill->m_clusterParentID->end());
+    m_out_nClusterParents.insert(m_out_nClusterParents.end(), inputSpill->m_nClusterParents->begin(), inputSpill->m_nClusterParents->end());
     m_out_nuVtxX.insert(m_out_nuVtxX.end(), inputSpill->m_nuVtxX->begin(), inputSpill->m_nuVtxX->end());
     m_out_nuVtxY.insert(m_out_nuVtxY.end(), inputSpill->m_nuVtxY->begin(), inputSpill->m_nuVtxY->end());
     m_out_nuVtxZ.insert(m_out_nuVtxZ.end(), inputSpill->m_nuVtxZ->begin(), inputSpill->m_nuVtxZ->end());
