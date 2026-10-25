@@ -31,6 +31,8 @@
 #include "SimpleClusterCreationThreeDAlgorithm.h"
 #include "SlicingThreeDAlgorithm.h"
 
+#include "vertex/LArNDMvaVertexSelectionAlgorithm.h"
+
 // clang-format off
 #define LAR_ND_ALGORITHM_LIST(d)                                                                                                   \
     d("LArMasterThreeD",                        MasterThreeDAlgorithm)                                                             \
@@ -44,7 +46,9 @@
     d("LArCutClusterCharacterisationThreeD",    CutClusterCharacterisationThreeDAlgorithm)                                         \
     d("LArCandidateVertexCreationThreeD",       CandidateVertexCreationThreeDAlgorithm)                                            \
     d("LArHierarchyAnalysis",                   HierarchyAnalysisAlgorithm)                                                        \
-    d("LArCheatingRockMuonRemoval",             CheatingRockMuonRemovalAlgorithm)
+    d("LArCheatingRockMuonRemoval",             CheatingRockMuonRemovalAlgorithm)                                                  \
+    d("LArNDBdtVertexSelection",                LArNDBdtVertexSelectionAlgorithm)                                               \
+    d("LArNDSvmVertexSelection",                LArNDSvmVertexSelectionAlgorithm)
 
 #define LAR_ND_ALGORITHM_TOOL_LIST(d)                                                                                              \
     d("LArEventSlicingThreeD",                  EventSlicingThreeDTool)                                                            \
