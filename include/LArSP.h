@@ -62,6 +62,7 @@ public:
     std::vector<float> *m_x = nullptr;
     std::vector<float> *m_y = nullptr;
     std::vector<float> *m_z = nullptr;
+    std::vector<float> *m_t0 = nullptr;
     std::vector<float> *m_ts = nullptr;
     std::vector<uint8_t> *m_io_group = nullptr;
     std::vector<uint8_t> *m_io_channel = nullptr;
@@ -79,6 +80,7 @@ public:
     TBranch *m_b_x = nullptr;
     TBranch *m_b_y = nullptr;
     TBranch *m_b_z = nullptr;
+    TBranch *m_b_t0 = nullptr;
     TBranch *m_b_ts = nullptr;
     TBranch *m_b_io_group = nullptr;
     TBranch *m_b_io_channel = nullptr;
@@ -149,6 +151,7 @@ void LArSP::Init(TTree *tree)
     m_fChain->SetBranchAddress("x", &m_x, &m_b_x);
     m_fChain->SetBranchAddress("y", &m_y, &m_b_y);
     m_fChain->SetBranchAddress("z", &m_z, &m_b_z);
+    m_fChain->SetBranchAddress("t0", &m_t0, &m_b_t0);
     m_fChain->SetBranchAddress("ts", &m_ts, &m_b_ts);
     m_fChain->SetBranchAddress("io_group", &m_io_group, &m_b_io_group);
     m_fChain->SetBranchAddress("io_channel", &m_io_channel, &m_b_io_channel);

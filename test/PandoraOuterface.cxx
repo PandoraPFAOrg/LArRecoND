@@ -546,7 +546,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                     chParams.m_cellThickness = parameters.pixelPitch;
                     chParams.m_nCellRadiationLengths = 1.f;
                     chParams.m_nCellInteractionLengths = 1.f;
-                    chParams.m_time = 0.f;
+                    chParams.m_time = pandoraIn->m_recoHitT0->at(idxHits);
                     chParams.m_inputEnergy = pandoraIn->m_recoHitE->at(idxHits);
                     chParams.m_mipEquivalentEnergy = pandoraIn->m_recoHitE->at(idxHits);
                     chParams.m_electromagneticEnergy = pandoraIn->m_recoHitE->at(idxHits);
@@ -658,7 +658,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                             chParams.m_cellThickness = parameters.pixelPitch;
                             chParams.m_nCellRadiationLengths = 1.f;
                             chParams.m_nCellInteractionLengths = 1.f;
-                            chParams.m_time = 0.f;
+                            chParams.m_time = trackState.GetCaloHit()->GetTime();
                             chParams.m_inputEnergy = trackState.GetCaloHit()->GetInputEnergy();
                             chParams.m_mipEquivalentEnergy = trackState.GetCaloHit()->GetMipEquivalentEnergy();
                             chParams.m_electromagneticEnergy = trackState.GetCaloHit()->GetElectromagneticEnergy();
@@ -717,7 +717,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                 chParams.m_cellThickness = parameters.pixelPitch;
                                 chParams.m_nCellRadiationLengths = 1.f;
                                 chParams.m_nCellInteractionLengths = 1.f;
-                                chParams.m_time = 0.f;
+                                chParams.m_time = caloHitVect_tmp.at(0)->GetTime();
                                 chParams.m_inputEnergy = caloHitVect_tmp.at(0)->GetInputEnergy();
                                 chParams.m_mipEquivalentEnergy = caloHitVect_tmp.at(0)->GetMipEquivalentEnergy();
                                 chParams.m_electromagneticEnergy = caloHitVect_tmp.at(0)->GetElectromagneticEnergy();
@@ -751,7 +751,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                     }
                                     if (parameters.verbosity >= 2)
                                         std::cout << "      --> Max Hit X = " << maxQ_X << ", Y = " << maxQ_Y << ", Q = " << maxQ << std::endl;
-                                    std::vector<float> xs, ys, zs, qs;
+                                    std::vector<float> xs, ys, zs, t0s, qs;
                                     std::vector<unsigned int> toDelete;
                                     for (unsigned int idxHit_inner = 0; idxHit_inner < caloHitVect_tmp.size(); ++idxHit_inner)
                                     {
@@ -763,10 +763,12 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                         if (std::sqrt(std::pow(thisX_inner - maxQ_X, 2) + std::pow(thisY_inner - maxQ_Y, 2)) < parameters.voxelZHW)
                                         {
                                             float thisZ_inner = caloHitVect_tmp.at(idxHit_inner)->GetPositionVector().GetZ();
+					    float thisT0_inner = caloHitVect_tmp.at(idxHit_inner)->GetTime();
                                             float thisQ_inner = caloHitVect_tmp.at(idxHit_inner)->GetInputEnergy();
                                             xs.push_back(thisX_inner);
                                             ys.push_back(thisY_inner);
                                             zs.push_back(thisZ_inner);
+					    t0s.push_back(thisT0_inner);
                                             qs.push_back(thisQ_inner);
                                             toDelete.push_back(idxHit_inner);
                                         }
@@ -792,12 +794,13 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                         caloHitVect_tmp.push_back(caloHitVect_tmp_prev.at(idxCopy));
                                     }
                                     // Make new hit:
-                                    float newHitX(0.), newHitY(0.), newHitZ(0.), newHitQ(0.);
+                                    float newHitX(0.), newHitY(0.), newHitZ(0.), newHitQ(0.), newHitT0(0.);
                                     for (unsigned int idxUse = 0; idxUse < xs.size(); ++idxUse)
                                     {
                                         newHitX += xs[idxUse] * qs[idxUse];
                                         newHitY += ys[idxUse] * qs[idxUse];
                                         newHitZ += zs[idxUse] * qs[idxUse];
+					newHitT0 += t0s[idxUse] * qs[idxUse];
                                         newHitQ += qs[idxUse];
                                     }
                                     if (newHitQ > 0.)
@@ -805,6 +808,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                         newHitX /= newHitQ;
                                         newHitY /= newHitQ;
                                         newHitZ /= newHitQ;
+					newHitT0 /= newHitQ;
                                     }
                                     lar_content::LArCaloHitParameters chParams;
                                     chParams.m_positionVector = {newHitX, newHitY, newHitZ};
@@ -816,7 +820,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                     chParams.m_cellThickness = parameters.pixelPitch;
                                     chParams.m_nCellRadiationLengths = 1.f;
                                     chParams.m_nCellInteractionLengths = 1.f;
-                                    chParams.m_time = 0.f;
+                                    chParams.m_time = newHitT0;
                                     chParams.m_inputEnergy = newHitQ;
                                     chParams.m_mipEquivalentEnergy = newHitQ;
                                     chParams.m_electromagneticEnergy = newHitQ;
