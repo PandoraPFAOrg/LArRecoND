@@ -8,20 +8,155 @@ from h5flow.data import dereference
 import h5flow
 import os
 import sys
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 # Refactored version of h5 to ROOT conversion, Bruce Howard - 2025
 # initial scripts are now saved in e.g. _minirun6_2.py and _minirun6_3.py versions e.g. and thanks to Richie Diurba and any others who made these scripts
+#
+# Sep 2026 update: hit MERGING is now performed here (moved out of ndlar_flow by Sindhu). The
+# converter reads the chosen *base* hits (prompt or filtered), merges same-channel
+# hits within MERGE_CUT, and merges the per-hit truth backtracking (segment_ids +
+# charge fraction) accordingly, so backtracking is preserved for merged hits.
 
 # NOTE for more on uproot TTree writing see the below or the uproot documentation
 # see https://stackoverflow.com/questions/72187937/writing-trees-number-of-baskets-and-compression-uproot
 
+# ------------------------------------------------------------------ #
+#  Merging configuration (defaults; overridden by the config yaml, arg 3)
+# ------------------------------------------------------------------ #
+# These are the Pandora-side defaults, used when no config yaml is
+# passed. The merger was removed from ndlar_flow and handed to this step.
+DEFAULT_BASE_HITS = 'filtered'   # 'prompt' or 'filtered'
+DEFAULT_DO_MERGE  = True         # merge same-channel hits here
+DEFAULT_MERGE_CUT = 65           # CRS ticks; MUST match the old ndlar_flow CalibHitMerger
+
+
+def load_hit_config(path):
+    '''Read the hit-selection/merging config yaml. Returns (base_hits, do_merge, merge_cut).
+    Falls back to the module defaults for any missing key.'''
+    cfg = {}
+    if path and os.path.isfile(path):
+        if yaml is None:
+            raise RuntimeError('PyYAML not available but a config file was given: %s' % path)
+        with open(path, 'r') as fh:
+            cfg = yaml.safe_load(fh) or {}
+    base = str(cfg.get('base_hits', DEFAULT_BASE_HITS)).lower()
+    if base not in ('prompt', 'filtered'):
+        base = DEFAULT_BASE_HITS
+    return base, bool(cfg.get('merge', DEFAULT_DO_MERGE)), int(cfg.get('merge_cut', DEFAULT_MERGE_CUT))
+
+
+def pick_base_key(f, prefer):
+    '''Choose which base hit dataset to read.
+
+    :param f: open h5py.File
+    :param prefer: 'prompt' or 'filtered'
+    :returns: one of 'prompt' / 'filtered' / 'final', falling back if the
+              preferred dataset is absent. 'final' is kept for backwards
+              compatibility with flow files produced before the
+              calib_final_hits -> calib_filtered_hits rename.
+    '''
+    order = ['filtered', 'final', 'prompt'] if prefer == 'filtered' else ['prompt', 'filtered', 'final']
+    for k in order:
+        if 'charge/calib_%s_hits' % k in f:
+            return k
+    return 'prompt'
+
+
+def merge_hits_and_backtrack(z, y, x, Q, E, ts, iog, ioc, chip, chan, ids,
+                             bt_fraction=None, bt_segids=None, merge_cut=DEFAULT_MERGE_CUT):
+    '''Merge same-channel hits (and their truth backtracking) within merge_cut.
+
+    Hits are grouped by physical channel (io_group, z, y). Within a group,
+    consecutive hits (sorted by ts) whose neighbour gap is < merge_cut are
+    combined into one hit:
+      - Q, E              -> summed
+      - x, ts             -> charge-weighted mean
+      - z, y, io_group,
+        io_channel, chip_id, channel_id  -> channel-constant, taken as-is
+
+    Backtracking (optional, MC only): each base hit carries a fixed-width list of
+    (segment_ids, fraction) where fraction is that segment's share of the *base
+    hit's* charge. For a merged hit the per-segment fraction is recomputed as the
+    charge-weighted combination of its constituents' fractions, deduplicated by
+    segment_id, kept up to the same number of slots (largest fraction first).
+
+    Returns merged arrays in the same order plus (merged_fraction, merged_segids)
+    (both None when no backtracking was supplied).
+    '''
+    n = len(z)
+    if n == 0:
+        return (z, y, x, Q, E, ts, iog, ioc, chip, chan, ids, bt_fraction, bt_segids)
+
+    # ---- group base hits into merged hits ----
+    order = np.lexsort((ts, y, z, iog))
+    zc, yc, ic, tc = z[order], y[order], iog[order], ts[order].astype(np.int64)
+    same = (zc[1:] == zc[:-1]) & (yc[1:] == yc[:-1]) & (ic[1:] == ic[:-1])
+    close = np.abs(np.diff(tc)) < merge_cut
+    starts = np.r_[True, ~(same & close)]         # a new merged hit begins here
+    gsorted = np.cumsum(starts) - 1
+    group = np.empty(n, dtype=np.int64)
+    group[order] = gsorted
+    ng = int(gsorted[-1]) + 1
+
+    w = np.abs(Q).astype('float64')
+    tot = np.zeros(ng, dtype='float64')
+    np.add.at(tot, group, w)
+    totw = np.where(tot == 0., 1e-300, tot)
+
+    def _sum(a):
+        s = np.zeros(ng, dtype='float64'); np.add.at(s, group, a.astype('float64')); return s
+
+    def _wmean(a):
+        s = np.zeros(ng, dtype='float64'); np.add.at(s, group, a.astype('float64') * w); return s / totw
+
+    def _first(a):
+        out = np.empty(ng, dtype=a.dtype)
+        out[group[::-1]] = a[::-1]                 # reversed write -> lowest-index hit wins
+        return out
+
+    m_z = _first(z); m_y = _first(y)
+    m_x = _wmean(x).astype('float32'); m_ts = _wmean(ts).astype('float32')
+    m_Q = _sum(Q).astype('float32'); m_E = _sum(E).astype('float32')
+    m_iog = _first(iog); m_ioc = _first(ioc); m_chip = _first(chip); m_chan = _first(chan)
+    m_ids = np.arange(ng)
+
+    # ---- merge the truth backtracking ----
+    m_frac = m_seg = None
+    if bt_fraction is not None and bt_segids is not None:
+        n_slots = bt_fraction.shape[1]
+        m_frac = np.zeros((ng, n_slots), dtype='float32')
+        m_seg = np.full((ng, n_slots), -1, dtype=bt_segids.dtype)
+        for g in range(ng):
+            idx = np.where(group == g)[0]
+            acc = {}                               # segment_id -> summed (fraction * charge)
+            for i in idx:
+                Qi = abs(float(Q[i]))
+                fr = bt_fraction[i]; sd = bt_segids[i]
+                for f_, s_ in zip(fr, sd):
+                    if f_ != 0.:
+                        acc[s_] = acc.get(s_, 0.) + float(f_) * Qi
+            if not acc:
+                continue
+            denom = sum(abs(v) for v in acc.values()) or 1e-300
+            top = sorted(acc.items(), key=lambda kv: -abs(kv[1]))[:n_slots]
+            for j, (s_, c_) in enumerate(top):
+                m_seg[g, j] = s_
+                m_frac[g, j] = c_ / denom
+
+    return (m_z, m_y, m_x, m_Q, m_E, m_ts, m_iog, m_ioc, m_chip, m_chan, m_ids, m_frac, m_seg)
+
+
 # Main function with command line settable params
 def printUsage():
-    print('python h5_to_root_ndlarflow.py FileList IsData IsFinalHits LegacyMode OutName')
+    print('python h5_to_root_ndlarflow.py FileList IsData HitConfig LegacyMode OutName')
     print('-- Parameters')
     print('FileList    [REQUIRED]:                                         comma separated set of files to convert - note it will be one output')
     print('IsData      [OPTIONAL, DEFAULT = 0, is MC]:                     1 = Data, otherwise = MC')
-    print('IsFinalHits [OPTIONAL, DEFAULT = 0, prompt hits]:               1 = use "final" hits, 2 = use "merged" hits, otherwise = "prompt"')
+    print('HitConfig   [OPTIONAL, DEFAULT = built-in filtered+merge]:      path to a hit-selection yaml (base_hits: prompt|filtered, merge: bool, merge_cut: int). Also accepts the strings "prompt"/"filtered" for convenience. See pandora_hits_config.yaml.')
     print('LegacyMode  [OPTIONAL, DEFAULT = 0, no legacy]:                 0 = no legacy mode, 1 = samples < MiniRun6, 2 = > MiniRun6 but no usec time')
     print('OutName     [OPTIONAL, DEFAULT = input[0]+"_hits_uproot.root"]: string for an output file name if you want to override. Note that default writes to current directory.')
     print('')
@@ -31,8 +166,9 @@ def printUsage():
 def main(argv=None):
     fileNames=[]
     useData=False
-    useFinalHits=False
-    useMergedHits=False
+    basePref=DEFAULT_BASE_HITS   # preferred base hits: 'prompt' or 'filtered'
+    do_merge=DEFAULT_DO_MERGE
+    merge_cut=DEFAULT_MERGE_CUT
     legacyMode=0
     overrideOutname=1
     outname=''
@@ -62,10 +198,18 @@ def main(argv=None):
             if int(sys.argv[2])==1:
                 useData=True
         if len(sys.argv)>3 and sys.argv[3]!=None:
-            if int(sys.argv[3])==1:
-                useFinalHits=True
-            if int(sys.argv[3])==2:
-                useMergedHits=True
+            arg3 = str(sys.argv[3])
+            if arg3 in ('prompt', 'filtered'):
+                basePref = arg3
+            elif os.path.isfile(arg3):
+                basePref, do_merge, merge_cut = load_hit_config(arg3)
+            else:
+                # back-compat: 0 = prompt base, otherwise = filtered base
+                try:
+                    basePref = 'prompt' if int(arg3)==0 else 'filtered'
+                except ValueError:
+                    print('Could not interpret HitConfig arg "%s"; using defaults (%s, merge=%s, cut=%d)'
+                          % (arg3, basePref, do_merge, merge_cut))
         if len(sys.argv)>4 and sys.argv[4]!=None:
             legacyMode=int(sys.argv[4])
         if len(sys.argv)>5 and sys.argv[5]!=None:
@@ -75,12 +219,6 @@ def main(argv=None):
     MaxArrayDepth=int(10000)
     MaxArrayDepthData=int(100000)
     isWritten=False
-
-    promptKey='prompt'
-    if useFinalHits==True:
-        promptKey='final'
-    elif useMergedHits==True:
-        promptKey='merged'
 
     if overrideOutname==1:
         outname = fileNames[0].split('/')[-1]+'_hits_uproot.root'
@@ -207,6 +345,10 @@ def main(argv=None):
         events=f['charge/events/data']
         flow_out=h5flow.data.H5FlowDataManager(fileName,"r")
 
+        # Decide which base hits to read for this file (prompt/filtered, with fallback)
+        baseKey = pick_base_key(f, basePref)
+        print('Using base hits: charge/calib_%s_hits  (merge=%s, merge_cut=%d)' % (baseKey, do_merge, merge_cut))
+
         eventsToRun=len(events)
 
         # Get the array of the trigger type for every event in the file
@@ -228,32 +370,32 @@ def main(argv=None):
             if ievt%10==0:
                 print('Currently on',ievt,'of',eventsToRun)
             event = events[ievt]
-            event_calib_prompt_hits=flow_out["charge/events/","charge/calib_"+promptKey+"_hits", events["id"][ievt]]
+            event_base_hits=flow_out["charge/events/","charge/calib_"+baseKey+"_hits", events["id"][ievt]]
 
-            if len(event_calib_prompt_hits[0])==0:
+            if len(event_base_hits[0])==0:
                 print('This event seems empty in the hits array, setting as bad event. Trigger type (',triggerIDs[ievt],')')
                 badEvt=True
 
-            # Removing duplicate hits_id instantiation and getting rid of hits_id_raw which is unused
+            # Read the base hits for this event
             #######################################
             if badEvt==False:
                 # Check if the only values are masked and call this a bad event if so
-                if np.ma.count_masked(event_calib_prompt_hits["z"][0]) == len(event_calib_prompt_hits[0]):
-                    print('This event has a hit z array ( len hits =', len(event_calib_prompt_hits[0]), ') that appears to be only masked values, setting as bad event. Trigger type (',triggerIDs[ievt],')')
+                if np.ma.count_masked(event_base_hits["z"][0]) == len(event_base_hits[0]):
+                    print('This event has a hit z array ( len hits =', len(event_base_hits[0]), ') that appears to be only masked values, setting as bad event. Trigger type (',triggerIDs[ievt],')')
                     badEvt=True
 
             if badEvt==False:
-                hits_z = (np.ma.getdata(event_calib_prompt_hits["z"][0])+trueZOffset).astype('float32')
-                hits_y = ( np.ma.getdata(event_calib_prompt_hits["y"][0])+trueYOffset ).astype('float32')
-                hits_x = ( np.ma.getdata(event_calib_prompt_hits["x"][0])+trueXOffset ).astype('float32')
-                hits_Q = ( np.ma.getdata(event_calib_prompt_hits["Q"][0]) ).astype('float32')
-                hits_E = ( np.ma.getdata(event_calib_prompt_hits["E"][0]) ).astype('float32')
-                hits_ts = ( np.ma.getdata(event_calib_prompt_hits["ts_pps"][0]) ).astype('float32')
-                hits_io_group = ( np.ma.getdata(event_calib_prompt_hits["io_group"][0]) ).astype('uint8')
-                hits_io_channel = ( np.ma.getdata(event_calib_prompt_hits["io_channel"][0]) ).astype('uint8')
-                hits_chip_id = ( np.ma.getdata(event_calib_prompt_hits["chip_id"][0]) ).astype('uint8')
-                hits_channel_id = ( np.ma.getdata(event_calib_prompt_hits["channel_id"][0]) ).astype('uint8')
-                hits_ids = np.ma.getdata(event_calib_prompt_hits["id"][0])
+                hits_z = (np.ma.getdata(event_base_hits["z"][0])+trueZOffset).astype('float32')
+                hits_y = ( np.ma.getdata(event_base_hits["y"][0])+trueYOffset ).astype('float32')
+                hits_x = ( np.ma.getdata(event_base_hits["x"][0])+trueXOffset ).astype('float32')
+                hits_Q = ( np.ma.getdata(event_base_hits["Q"][0]) ).astype('float32')
+                hits_E = ( np.ma.getdata(event_base_hits["E"][0]) ).astype('float32')
+                hits_ts = ( np.ma.getdata(event_base_hits["ts_pps"][0]) ).astype('float32')
+                hits_io_group = ( np.ma.getdata(event_base_hits["io_group"][0]) ).astype('uint8')
+                hits_io_channel = ( np.ma.getdata(event_base_hits["io_channel"][0]) ).astype('uint8')
+                hits_chip_id = ( np.ma.getdata(event_base_hits["chip_id"][0]) ).astype('uint8')
+                hits_channel_id = ( np.ma.getdata(event_base_hits["channel_id"][0]) ).astype('uint8')
+                hits_ids = np.ma.getdata(event_base_hits["id"][0])
             else:
                 hits_z = np.array([]).astype('float32')
                 hits_y = np.array([]).astype('float32')
@@ -275,7 +417,7 @@ def main(argv=None):
             spillID = 0
             if useData==False and badEvt==False:
                 unmaskedSpillIDs = []
-                if promptKey=='prompt':
+                if baseKey=='prompt':
                     allSpillIDs=flow_out["charge/calib_prompt_hits","charge/packets","mc_truth/segments",hits_ids]["event_id"]
                     unmaskedSpillIDs = allSpillIDs.data[ ~allSpillIDs.mask ]
                 else:
@@ -288,6 +430,27 @@ def main(argv=None):
                 else:
                     print('This event has no spillID from matches that we want to use in grabbing true particles/neutrinos. Setting as bad event. Trigger type (',triggerIDs[ievt],')')
                     badEvt=True
+
+            # ---- read base backtracking (MC), BEFORE merging (uses base hit ids) ----
+            base_frac = base_seg = None
+            if useData==False and badEvt==False:
+                base_charge_path = 'charge/calib_%s_hits' % baseKey
+                base_truth_path  = 'mc_truth/calib_%s_hit_backtrack' % baseKey
+                base_bt = flow_out[base_charge_path, base_truth_path, hits_ids[:]][:,0]
+                base_frac = np.ma.getdata(base_bt['fraction'])
+                base_seg  = np.ma.getdata(base_bt['segment_ids'])
+
+            # ---- merge hits (and backtracking) ----
+            merged_frac = merged_seg = None
+            if badEvt==False and do_merge:
+                (hits_z, hits_y, hits_x, hits_Q, hits_E, hits_ts,
+                 hits_io_group, hits_io_channel, hits_chip_id, hits_channel_id, hits_ids,
+                 merged_frac, merged_seg) = merge_hits_and_backtrack(
+                    hits_z, hits_y, hits_x, hits_Q, hits_E, hits_ts,
+                    hits_io_group, hits_io_channel, hits_chip_id, hits_channel_id, hits_ids,
+                    base_frac, base_seg, merge_cut)
+            else:
+                merged_frac, merged_seg = base_frac, base_seg
 
             # Start with the non-spill info, this is all ~like the current form
             #   but not repeating
@@ -314,33 +477,16 @@ def main(argv=None):
                 if legacyMode!=1 and legacyMode!=2:
                     event_unix_ts_usec = np.array( [-5], dtype='int32' )
 
-            # "uncalib" -- this alternative is not currently used in LArPandora that I can tell, so no need to save. Making optional to use the prompt or final hits to be saved.
-            #######################################
-
             if useData==False:
-                # Truth-level info for hits
+                # Truth-level info for hits (from the MERGED backtracking)
                 #######################################
-                if badEvt==False:
-                    charge_path = None
-                    truth_path = None
+                if badEvt==False and merged_frac is not None:
+                    # Matches (per merged hit) + flattened contributing-segment lists
+                    nonzero = (merged_frac != 0.)
+                    matches = nonzero.sum(axis=1).astype('uint16')
+                    packetFrac = merged_frac[nonzero].astype('float32')
+                    segmentIDs = merged_seg[nonzero]
 
-                    if promptKey == 'merged':
-                        charge_path  = 'charge/calib_merged_hits'
-                        truth_path = 'mc_truth/calib_merged_hit_backtrack'
-                    else:
-                        charge_path  = 'charge/calib_prompt_hits'
-                        truth_path = 'mc_truth/calib_prompt_hit_backtrack'
-
-                    backtrackHits=flow_out[charge_path, truth_path, hits_ids[:]][:,0]
-
-                    # Matches
-                    backtrackMasked = np.ma.masked_equal( backtrackHits['fraction'].data, 0. )
-                    backtrackMaskArr = np.ma.getmask(backtrackMasked)
-                    matches = backtrackMasked.count(axis=1).astype('uint16')
-                    # Fractions - note that "packet" is not always right terminology, e.g. with merged hits. Keeping nomenclature.
-                    packetFrac = backtrackHits['fraction'].data[~backtrackMaskArr].astype('float32')
-                    # Get the segment IDs then get the segments themselves
-                    segmentIDs = backtrackHits['segment_ids'].data[~backtrackMaskArr]
                     all_segments = f['mc_truth/segments/data']
                     all_segments = all_segments[ np.where(all_segments['event_id']==spillID) ]
                     all_segmentIDs = all_segments['segment_id']
