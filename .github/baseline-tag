@@ -1,0 +1,3 @@
+# Tag that tag-baseline.yml builds and runs, to compare PRs against.
+# Bump this to refresh the baseline (the workflow reruns on change).
+v01-05-00

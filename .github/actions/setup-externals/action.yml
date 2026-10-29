@@ -1,0 +1,29 @@
+name: "Setup External Dependencies"
+description: "Installs external dependencies, from the URLs provided as inputs"
+
+inputs:
+  root-url:
+    description: "The full URL to the ROOT tarball"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate ROOT Cache Key
+      id: root-key
+      shell: bash
+      run: echo "hash=$(echo -n '${{ inputs.root-url }}' | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+    - name: Cache and Install ROOT
+      id: cache-root
+      uses: actions/cache@v6
+      with:
+        path: /pandora/root
+        key: ${{ runner.os }}-root-${{ steps.root-key.outputs.hash }}
+
+    - name: Install ROOT
+      if: steps.cache-root.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        wget -O root.tar.gz "${{ inputs.root-url }}"
+        tar -xzvf root.tar.gz && mv root/ /pandora/root
+        rm root.tar.gz

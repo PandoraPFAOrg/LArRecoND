@@ -1,0 +1,311 @@
+# Reusable workflow: build the Pandora stack and run the reconstruction over
+# the standard datasets, uploading the validation output as artifacts.
+#
+# Used by:
+#   - main.yml:         the PR / master run (optionally comparing to references).
+#   - tag-baseline.yml: a periodic run over a fixed tag, kept as a reference.
+name: Reconstruct and Validate
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (e.g. a tag) to build and test. Empty uses the calling commit.
+        type: string
+        default: ""
+      compare-references:
+        description: Download the main and baseline outputs and compare against them.
+        type: boolean
+        default: false
+      full-compiler-matrix:
+        description: Build with every compiler, rather than just the primary one.
+        type: boolean
+        default: true
+
+env:
+  PRIMARY_COMPILER: gcc-13
+
+jobs:
+  # Read the dataset matrix from the shared definition.
+  datasets:
+    runs-on: ubuntu-24.04
+    if: github.repository_owner == 'PandoraPFAOrg'
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - name: Checkout LArRecoND Repository
+        uses: actions/checkout@v7
+
+      - name: Read Datasets
+        id: read
+        run: echo "matrix=$(jq -c . .github/datasets.json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    runs-on: ubuntu-24.04
+    name: LArRecoND - ${{ matrix.compiler.c }}
+
+    # Only run in the PandoraPFAOrg repos.
+    if: github.repository_owner == 'PandoraPFAOrg'
+
+    # Defines the build matrix, so what combinatorics of compiler etc. to test.
+    strategy:
+      fail-fast: false # Don't quit other jobs if one job fails.
+      matrix:
+        # Baseline runs only need the primary compiler.
+        compiler: ${{ fromJSON(inputs.full-compiler-matrix && '[{"cpp":"g++-13","c":"gcc-13"},{"cpp":"clang++","c":"clang"}]' || '[{"cpp":"g++-13","c":"gcc-13"}]') }}
+
+    # Set the compiler env vars to ensure the correct compiler is used.
+    # Similarly, set all the URLs for external dependencies in one place.
+    env:
+      CC: ${{ matrix.compiler.c }}
+      CXX: ${{ matrix.compiler.cpp }}
+      ROOT_URL: "https://root.cern/download/root_v6.36.04.Linux-ubuntu24.04-x86_64-gcc13.3.tar.gz"
+      TORCH_URL: "https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.1.1%2Bcpu.zip"
+
+    steps:
+      # Get the current repo (for the CI actions and scripts)...
+      - name: Checkout LArRecoND Repository
+        uses: actions/checkout@v7
+
+      # If building a specific ref (e.g. a baseline tag), fetch it alongside.
+      # The CI actions above always come from the workflow's own commit, so the
+      # ref only needs to contain the code and build scripts.
+      - name: Checkout Source Under Test
+        if: inputs.ref != ''
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          path: source-under-test
+
+      # Install required dependencies...
+      - name: Setup Env
+        uses: ./.github/actions/setup-env
+
+      # Grab ROOT...
+      - name: Setup External Dependencies
+        uses: ./.github/actions/setup-externals
+        with:
+          root-url: ${{ env.ROOT_URL }}
+
+      # Build all of Pandora!
+      - name: Build Pandora Software Stack
+        uses: ./.github/actions/build-pandora
+        with:
+          source-dir: ${{ inputs.ref != '' && format('{0}/source-under-test', github.workspace) || github.workspace }}
+
+      # At the end of the build, save a copy of the build env as an artifact for
+      # later use in the test stage.
+      - name: Archive Build Environment
+        uses: actions/upload-artifact@v7
+        if: matrix.compiler.c == env.PRIMARY_COMPILER
+        with:
+          name: pandora-build-env-${{ matrix.compiler.c }}
+          path: /pandora
+          retention-days: 1
+
+  # Next, a testing workflow.
+  #
+  # This will take one of the just made builds and use it for a live test.
+  # I.e. run over the defined datasets.
+  #
+  # We do this as a follow up, since it only needs to be done once,
+  # and it means we don't bother doing a test if one of the build failed.
+  test:
+    needs: [build, datasets]
+    runs-on: ubuntu-24.04
+    if: github.repository_owner == 'PandoraPFAOrg'
+
+    # The datasets to test against live in datasets.json, shared by all callers.
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.datasets.outputs.matrix) }}
+
+    name: Test ${{ matrix.name }} Data
+
+    steps:
+      # Grab the repo again...
+      - name: Checkout LArRecoND Repository
+        uses: actions/checkout@v7
+
+      # And setup the environment...
+      - name: Setup Env
+        uses: ./.github/actions/setup-env
+
+      # And Python (for FLOW conversion)...
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      # Grab the build we just made, so we can run the tests with the same
+      # setup.
+      - name: Download Build Environment
+        uses: actions/download-artifact@v8
+        with:
+          name: pandora-build-env-${{ env.PRIMARY_COMPILER }}
+          path: /pandora
+
+      # Start setting up for the data...
+      - name: Setup Downloads
+        run: |
+          mkdir -p /pandora/data
+
+      # Generate a unique hash key for the data files, so we can cache them.
+      - name: Generate URL Hash Key
+        id: url-key
+        shell: bash
+        run: |
+          hash=$(printf '%s|%s' '${{ matrix.data_url }}' '${{ matrix.geometry_url }}' | sha256sum | cut -d ' ' -f 1)
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+      # Already have a cache for these files? Grab it!
+      - name: Cache Data Files
+        id: cache-data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            /pandora/data/*.hdf5
+            /pandora/data/*.gdml
+          key: ${{ steps.url-key.outputs.hash }}
+
+      # No cache? Download them.
+      - name: Download Data Files
+        id: download-data
+        if: steps.cache-data.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          echo "Downloading data files..."
+          cd /pandora/data/
+          sleep $((RANDOM % 120))
+          wget --show-progress --progress=bar:force:noscroll \
+            --tries=5 --timeout=60 --waitretry=10 \
+            "${{ matrix.data_url }}" -O input_data.hdf5
+          wget --show-progress --progress=bar:force:noscroll \
+            --tries=5 --timeout=60 --waitretry=10 \
+            "${{ matrix.geometry_url }}" -O geometry.gdml
+
+      # Fully process the two input files - HDF5 -> ROOT + Geo Conversion.
+      - name: Process Files With Python
+        shell: bash -l {0}
+        env:
+          UCX_TLS: tcp,self,sm
+        run: |
+          echo "Fixing data folder..."
+          sudo chmod -R +x /pandora
+
+          echo "Processing files with Python..."
+          cd /pandora/data/
+          python3 /pandora/LArRecoND/ndlarflow/h5_to_root_ndlarflow.py /pandora/data/input_data.hdf5 ${{ matrix.flags }} converted_flow.root
+
+          echo "Setting up environment for ROOT..."
+          source /pandora/setup.sh
+
+          echo "Converting processed file to ROOT..."
+          root -l -b -q /pandora/LArRecoND/ndlarflow/rootToRootConversion.C+\(true,\"converted_flow.root\",\"processed_output.root\"\)
+          ln -s processed_output.root /pandora/data/LArRecoNDInput.root
+
+          echo "Converting geometry GDML to ROOT..."
+          root -l -b <<EOF
+            TGeoManager::LockDefaultUnits(kFALSE);
+            TGeoManager::SetDefaultUnits(TGeoManager::kRootUnits);
+            TGeoManager::Import("/pandora/data/geometry.gdml");
+            gGeoManager->Export("/pandora/data/geometry.root");
+          EOF
+
+          echo "Data processing complete."
+          ls -lh /pandora/data/
+
+      # Finally, run Pandora with the processed input data and geometry, using
+      # the specified XML settings.
+      - name: Run Binary Tests
+        id: binary
+        run: |
+          source /pandora/setup.sh
+          cd /pandora/data/
+          /pandora/LArRecoND/build/PandoraInterface \
+           -i /pandora/LArRecoND/settings/${{ matrix.xml }} \
+           -r ${{ matrix.run_type }} \
+           -e /pandora/data/processed_output.root \
+           -g /pandora/data/geometry.root \
+           -f SPMC \
+           -n ${{ matrix.events }} -N
+
+      # When comparing, grab the reference ROOT files for validation: the latest
+      # successful output from master, and the latest baseline run (a fixed
+      # tag, see tag-baseline.yml). Either may be missing (no artifact yet, or
+      # the workflow has never run so GitHub can't find it): not fatal, as the
+      # Resolve References step below skips anything that didn't download.
+      - name: Download Main Reference File
+        if: inputs.compare-references
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: main.yml
+          name: reco-validation-${{ matrix.id }}
+          path: /pandora/data/reference/main
+          branch: master
+          if_no_artifact_found: warn
+
+      - name: Download Tag Reference File
+        if: inputs.compare-references
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: tag-baseline.yml
+          name: reco-validation-${{ matrix.id }}
+          path: /pandora/data/reference/baseline
+          branch: master
+          if_no_artifact_found: warn
+
+      # Turn whatever was found into a list of NAME=PATH references. The
+      # baseline is named after the tag it was built from.
+      - name: Resolve References
+        id: references
+        if: inputs.compare-references
+        shell: bash
+        run: |
+          refs=""
+          ref_dir=/pandora/data/reference
+
+          main_file="$ref_dir/main/${{ matrix.id }}-LArRecoND.root"
+          if [[ -f "$main_file" ]]; then
+            refs+="main=$main_file"$'\n'
+          fi
+
+          baseline_file="$ref_dir/baseline/${{ matrix.id }}-LArRecoND.root"
+          if [[ -f "$baseline_file" ]]; then
+            label=$(cat "$ref_dir/baseline/baseline-ref.txt" 2>/dev/null || echo baseline)
+            label=$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '_')
+            refs+="$label=$baseline_file"$'\n'
+          fi
+
+          echo "References: ${refs:-none}"
+          {
+            echo 'list<<EOF'
+            printf '%s' "$refs"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      # After this, validate the output in a basic way: Check the output exists,
+      # has entries and make some basic plots. Also include comparisons, if
+      # possible.
+      - name: Validate and Upload Reconstruction Results
+        if: always()
+        uses: ./.github/actions/validate-reconstruction
+        with:
+          dataset-id: ${{ matrix.id }}
+          dataset-name: ${{ matrix.name }}
+          binary-outcome: ${{ steps.binary.outcome }}
+          job-outcome: ${{ job.status }}
+          is-pull-request: ${{ inputs.compare-references }}
+          references: ${{ steps.references.outputs.list }}
+          baseline-label: ${{ inputs.ref }}
+
+      # Next, if we did download the data, cache it for the next run.
+      - name: Save Data Cache
+        uses: actions/cache/save@v6
+        if: always() && steps.download-data.outcome == 'success'
+        with:
+          path: |
+            /pandora/data/*.hdf5
+            /pandora/data/*.gdml
+          key: ${{ steps.url-key.outputs.hash }}

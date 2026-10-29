@@ -1,0 +1,56 @@
+# Periodically build and run a fixed tag, so PRs can be compared against it
+# (alongside master) in the validation report.
+#
+# The tag comes from the workflow_dispatch input, or else .github/baseline-tag.
+# Artifacts only last 90 days, so this reruns weekly to keep one available.
+name: Baseline Reference
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to run (defaults to .github/baseline-tag)
+        required: false
+        type: string
+  push:
+    branches:
+      - master
+    paths:
+      - .github/baseline-tag
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'PandoraPFAOrg'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout LArRecoND Repository
+        uses: actions/checkout@v7
+
+      - name: Resolve Tag
+        id: tag
+        run: |
+          tag="${{ inputs.tag }}"
+          if [[ -z "$tag" ]]; then
+            tag=$(grep -v '^[[:space:]]*#' .github/baseline-tag | grep -v '^[[:space:]]*$' | head -n 1)
+          fi
+          if [[ -z "$tag" ]]; then
+            echo "No baseline tag configured" >&2
+            exit 1
+          fi
+          echo "Baseline tag: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  reconstruct:
+    needs: resolve
+    uses: ./.github/workflows/reconstruct.yml
+    with:
+      ref: ${{ needs.resolve.outputs.tag }}
+      full-compiler-matrix: false

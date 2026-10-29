@@ -58,7 +58,6 @@ void RockMuonTaggingTool::FindAmbiguousPfos(const PfoList &parentCosmicRayPfos, 
     if (this->GetPandora().GetSettings()->ShouldDisplayAlgorithmInfo())
         std::cout << "----> Running Algorithm Tool: " << this->GetInstanceName() << ", " << this->GetType() << std::endl;
 
-    // TODO to Refactored in LAr Content. Good for now
     const LArTPCMap &larTPCMap(this->GetPandora().GetGeometry()->GetLArTPCMap());
     const LArTPC *const pFirstLArTPC(larTPCMap.begin()->second);
 
@@ -86,11 +85,14 @@ void RockMuonTaggingTool::FindAmbiguousPfos(const PfoList &parentCosmicRayPfos, 
     m_face_Yt = parentMaxY;
     m_face_Zu = parentMinZ;
     m_face_Zd = parentMaxZ;
-    // end refactoring here
 
-    std::cout << "Detector boundaries to tag clear rock muons : " << "x [" << m_face_Xa + m_marginX << "," << m_face_Xc - m_marginX << "] "
-              << "y [" << m_face_Yb + m_marginY << "," << m_face_Yt - m_marginY << "] " << "z [" << m_face_Zu + m_marginZ << ","
-              << m_face_Zd - m_marginZ << "] \n";
+    if (this->GetPandora().GetSettings()->ShouldDisplayAlgorithmInfo())
+    {
+        std::cout << "RockMuonTaggingTool: Detector boundaries to tag Clear Rock Muons : " <<
+                "X [" << m_face_Xa + m_marginX << ","  << m_face_Xc - m_marginX << "] " <<
+                "Y [" << m_face_Yb + m_marginY << ", " << m_face_Yt - m_marginY << "] " <<
+                "Z [" << m_face_Zu + m_marginZ << ", " << m_face_Zd - m_marginZ << "]" << std::endl;
+    }
 
     int nof_tagged_rockmus = 0;
 
@@ -105,7 +107,7 @@ void RockMuonTaggingTool::FindAmbiguousPfos(const PfoList &parentCosmicRayPfos, 
 
         if (!is_throughgoing)
         {
-            // clean this clear rock mu from ambiguousPfos
+            // Clean this clear rock mu from ambiguousPfos
             ambiguousPfos.push_back(pPfo);
         }
         else
@@ -114,7 +116,8 @@ void RockMuonTaggingTool::FindAmbiguousPfos(const PfoList &parentCosmicRayPfos, 
         }
     }
 
-    std::cout << "nof tagged rock muons : " << nof_tagged_rockmus << "\n";
+    if (this->GetPandora().GetSettings()->ShouldDisplayAlgorithmInfo())
+        std::cout << "RockMuonTaggingTool: Rock Muon tagged: " << nof_tagged_rockmus << std::endl;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------

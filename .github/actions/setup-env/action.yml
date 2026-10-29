@@ -1,0 +1,14 @@
+name: "Setup Env"
+description: "Installs system packages"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install System Dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y binutils cmake dpkg-dev g++ gcc libssl-dev git libx11-dev \
+          libxext-dev libxft-dev libxpm-dev python3 libtbb-dev libvdt-dev libgif-dev \
+          xlibmesa-glu-dev libftgl-dev libgl2ps-dev libglew-dev wget unzip libeigen3-dev
+        sudo mkdir -m 0777 -p /pandora

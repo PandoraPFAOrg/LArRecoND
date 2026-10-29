@@ -1,0 +1,49 @@
+# Build LArRecoND against the full Pandora stack, standalone
+name: Build LArRecoND
+
+# Controls when the workflow will run
+on:
+  # Trigger the workflow on push to master, or any pull request.
+  # workflow_dispatch allows manual running through the GitHub UI.
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch:
+
+# Concurrency group ensures that only one workflow run is active for a given PR
+# or branch at a time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Build Pandora and run the reconstruction, via the reusable reconstruct.yml.
+jobs:
+
+  # First things first, if this is a pull request, save the PR number as an
+  # artifact for later use.
+  setup:
+    runs-on: ubuntu-latest
+    name: Save PR Info
+    if: github.event_name == 'pull_request' && github.repository_owner == 'PandoraPFAOrg'
+    steps:
+
+      - name: Save PR Number
+        run: |
+          mkdir -p pr-info
+          echo ${{ github.event.pull_request.number }} > pr-info/pr_number.txt
+
+      - name: Upload PR Number
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr-number
+          path: pr-info/
+
+  # Everything else (build, run, validate, compare) is shared with the baseline
+  # workflow. On PRs, compare against master and the baseline tag.
+  reconstruct:
+    uses: ./.github/workflows/reconstruct.yml
+    with:
+      compare-references: ${{ github.event_name == 'pull_request' }}

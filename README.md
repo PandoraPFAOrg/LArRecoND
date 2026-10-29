@@ -422,6 +422,33 @@ The job run file created by the python script depends on the sample option and t
 Separate job run files are also made for each sample, which can be sourced individually to split up the
 job submission process.
 
+## GitHub Actions CI
+
+There is a basic CI workflow for LArRecoND that is run on GitHub Actions, which
+builds the software and runs a few basic tests.
+
+Its main goals are two things: Catch build and basic runtime errors (i.e. the
+software builds and reconstructs things), and to validate the reconstruction
+output against reference files, to catch any changes in the reconstruction
+performance. This second point is only done at low stats though, so should not
+be relied on for detailed performance validation, but it is a good first check
+to catch any major changes in the reconstruction output.
+
+It does a few things:
+
+ - It builds the software using the `build.sh` script, which builds Pandora and
+ LArRecoND with all dependencies.
+ - It runs a few basic tests, which include running the `PandoraInterface`
+ executable with a few different settings files and input files, and checking
+ that the output ROOT files are created and look vaguely valid.
+ - It compares the output ROOT files against 2 refence ROOT files: one dynamically
+ built on the master branch, and another for a given tagged release. This
+ comparison is doing using the `validation/ciRecoValidation.py` script.
+ - Finally, the result of this check, both a table of the raw max, min, average
+ etc, is commented on any new PRs, and a full image of the output plots is
+ uploaded to the PR for inspection.
+   - The data used for the plots is also uploaded to the CI, for manual inspection if needed.
+
 
 ## License and Copyright
 

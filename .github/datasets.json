@@ -1,0 +1,22 @@
+[
+  {
+    "name": "2x2 MiniRun6.5",
+    "id": "two-by-two",
+    "data_url": "https://portal.nersc.gov/project/dune/data/2x2/simulation/productions/MiniRun6.5_1E19_RHC/MiniRun6.5_1E19_RHC.flow/FLOW/0000000/MiniRun6.5_1E19_RHC.flow.0000000.FLOW.hdf5",
+    "geometry_url": "https://raw.githubusercontent.com/DUNE/2x2_sim/refs/heads/develop/geometry/Merged2x2MINERvA_v4/Merged2x2MINERvA_v4_withRock.gdml",
+    "flags": "0 0 0",
+    "xml": "PandoraSettings_LArRecoND_ThreeD_RockMuTagging.xml",
+    "run_type": "CRRemHitsSliceNu",
+    "events": 25
+  },
+  {
+    "name": "NDLAr MicroProdN4p1",
+    "id": "ndlar",
+    "data_url": "https://portal.nersc.gov/project/dune/data/ND/MicroProdN4p1/run-ndlar-flow/MicroProdN4p1_NDComplex_FHC.flow.full/FLOW/0002000/MicroProdN4p1_NDComplex_FHC.flow.full.0002459.FLOW.hdf5",
+    "geometry_url": "https://raw.githubusercontent.com/DUNE/2x2_sim/refs/heads/develop/geometry/Merged2x2MINERvA_v4/Merged2x2MINERvA_v4_withRock.gdml",
+    "flags": "0 0 2",
+    "xml": "PandoraSettings_LArRecoND_ThreeD_CheatedSlicing_RockMuTagging.xml",
+    "run_type": "CRRemHitsSliceNu",
+    "events": 1
+  }
+]
