@@ -14,11 +14,6 @@ on:
         description: Tag to run (defaults to .github/baseline-tag)
         required: false
         type: string
-  push:
-    branches:
-      - master
-    paths:
-      - .github/baseline-tag
 
 concurrency:
   group: ${{ github.workflow }}

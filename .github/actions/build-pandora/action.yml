@@ -29,30 +29,22 @@ runs:
         echo 'export FW_SEARCH_PATH=/pandora/LArRecoND/settings' >> /pandora/setup.sh
         echo 'export FW_SEARCH_PATH=$FW_SEARCH_PATH:/pandora/LArMachineLearningData/' >> /pandora/setup.sh
 
-    - name: Build Pandora Stack
-      shell: bash
-      run: |
-        source /pandora/setup.sh
-        bash /pandora/LArRecoND/scripts/build/build.sh
-
     - name: Generate ML Data Cache Key
       id: ml-cache-key
       shell: bash
       run: |
-        ML_COMMIT=$(git -C /pandora/LArMachineLearningData rev-parse HEAD)
-        echo "key=ml-data-${{ runner.os }}-${ML_COMMIT}-dune-dunend" >> "$GITHUB_OUTPUT"
+        ML_VERSION=$(sed -n 's/^export PANDORA_LAR_MLDATA_VERSION=//p' /pandora/LArRecoND/scripts/tags.sh)
+        test -n "$ML_VERSION"
+        echo "key=ml-data-${{ runner.os }}-${ML_VERSION}" >> "$GITHUB_OUTPUT"
 
     - name: ML Data Cache
-      id: ml-cache
       uses: actions/cache@v6
       with:
         path: /pandora/LArMachineLearningData
         key: ${{ steps.ml-cache-key.outputs.key }}
 
-    - name: Download ML Data
+    - name: Build Pandora Stack
       shell: bash
-      if: steps.ml-cache.outputs.cache-hit != 'true'
       run: |
         source /pandora/setup.sh
-        cd /pandora/LArMachineLearningData
-        source download.sh "dune" "dunend"
+        bash /pandora/LArRecoND/scripts/build/build.sh
