@@ -411,7 +411,7 @@ void HierarchyAnalysisAlgorithm::EventAnalysisOutput(const LArHierarchyHelper::M
                 // Unique and local MC Ids
                 const long mcId = (pLeadingMC != nullptr) ? reinterpret_cast<intptr_t>(pLeadingMC->GetUid()) : 0;
                 const long mcLocalId = (m_mcIdMap.find(mcId) != m_mcIdMap.end()) ? m_mcIdMap.at(mcId) : mcId;
-                const int isPrimary = (pLeadingMC != nullptr && LArMCParticleHelper::IsPrimary(pLeadingMC)) ? 1 : 0;
+                const int isPrimary = (pLeadingMC != nullptr && LArMCParticleHelper::IsPrimary(pLeadingMC,false)) ? 1 : 0;
                 const float mcEnergy = (pLeadingMC != nullptr) ? pLeadingMC->GetEnergy() : 0.f;
                 const CartesianVector mcMomentum = (pLeadingMC != nullptr) ? pLeadingMC->GetMomentum() : CartesianVector(0.f, 0.f, 0.f);
                 const CartesianVector mcVertex = (pLeadingMC != nullptr) ? pLeadingMC->GetVertex() : CartesianVector(max, max, max);
