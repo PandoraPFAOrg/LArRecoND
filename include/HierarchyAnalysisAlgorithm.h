@@ -12,6 +12,7 @@
 #include "Objects/Cluster.h"
 #include "Objects/ParticleFlowObject.h"
 #include "Pandora/Algorithm.h"
+#include "Pandora/ExternallyConfiguredAlgorithm.h"
 
 #include "larpandoracontent/LArHelpers/LArHierarchyHelper.h"
 
@@ -26,7 +27,7 @@ typedef std::map<long, long> MCIdUniqueLocalMap;
 /**
  *  @brief  HierarchyAnalysisAlgorithm class
  */
-class HierarchyAnalysisAlgorithm : public pandora::Algorithm
+class HierarchyAnalysisAlgorithm : public pandora::ExternallyConfiguredAlgorithm
 {
 public:
     /**
@@ -43,14 +44,14 @@ public:
     {
     public:
         /**
-         *  @brief  Constructor
-	 *
-	 *  @param  pNuRoot The neutrino parent MC particle
-	 *  @param  pLeadingMC The leading best matched MC particle
-	 *  @param  nSharedHits The number of shared hits between the matched reco and MC
-	 *  @param  completeness The completeness of the match
-	 *  @param  purity The purity of the match
-         */
+     *  @brief  Constructor
+     *
+     *  @param  pNuRoot The neutrino parent MC particle
+     *  @param  pLeadingMC The leading best matched MC particle
+     *  @param  nSharedHits The number of shared hits between the matched reco and MC
+     *  @param  completeness The completeness of the match
+     *  @param  purity The purity of the match
+     */
         RecoMCMatch(const pandora::MCParticle *pNuRoot, const pandora::MCParticle *pLeadingMC, const int nSharedHits,
             const float completeness, const float purity);
 
@@ -59,6 +60,17 @@ public:
         int m_nSharedHits;                       ///< The number of shared hits between the matched reco and MC
         float m_completeness;                    ///< The completeness of the match
         float m_purity;                          ///< The purity of the match
+    };
+
+    /**
+     *  @brief  External parameters class, used to pass CLI args to the algorithm.
+     */
+    class ExternalEventFileParameters : public pandora::ExternalParameters
+    {
+    public:
+        pandora::InputString m_eventFileName; ///< The path to the input ROOT file with the events tree
+        pandora::InputString m_eventTreeName; ///< The name of the events tree in that file
+        pandora::InputInt m_eventsToSkip;     ///< The number of events skipped from the start of the event file
     };
 
 private:

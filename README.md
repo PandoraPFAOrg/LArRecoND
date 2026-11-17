@@ -64,6 +64,16 @@ compatible with your system.
 
 This will build a full build of Pandora, including DL support.
 
+### Build type
+
+The build scripts default to `RelWithDebInfo` (`-O2 -g`), which suits development and profiling.
+For production running (e.g. grid jobs) opt in to an optimised `Release` build (`-O3`, no debug symbols) by setting
+`PANDORA_BUILD_TYPE` when running whichever build script you use above:
+
+```sh
+PANDORA_BUILD_TYPE=Release ./LArRecoND/scripts/build/build_al9.sh
+```
+
 ### LArMachineLearningData
 
 Various neutrino algorithms need to use MicroBooNE/SBND and DUNE training files from the
@@ -326,7 +336,7 @@ class. The hierarchy analysis algorithm is enabled using the following example x
         <AnalysisTreeName>LArRecoND</AnalysisTreeName>
         <FoldToPrimaries>false</FoldToPrimaries>
         <FoldToLeadingShowers>false</FoldToLeadingShowers>
-	<FoldDynamic>true</FoldDynamic>
+        <FoldDynamic>true</FoldDynamic>
         <MinPurity>0.5</MinPurity>
         <MinCompleteness>0.1</MinCompleteness>
         <MinRecoHits>15</MinRecoHits>
@@ -358,30 +368,32 @@ IDs for CAF truth matching:
         <EventFileName>LArRecoNDInput.root</EventFileName>
         <EventTreeName>events</EventTreeName>
         <EventLeafName>event</EventLeafName>
-	<RunLeafName>run</RunLeafName>
-	<SubRunLeafName>subrun</SubRunLeafName>
-	<UnixTimeLeafName>unix_ts</UnixTimeLeafName>
-	<UnixTimeUsecLeafName>unix_ts_usec</UnixTimeUsecLeafName>
-	<StartTimeLeafName>event_start_t</StartTimeLeafName>
-	<EndTimeLeafName>event_end_t</EndTimeLeafName>
+        <RunLeafName>run</RunLeafName>
+        <SubRunLeafName>subrun</SubRunLeafName>
+        <UnixTimeLeafName>unix_ts</UnixTimeLeafName>
+        <UnixTimeUsecLeafName>unix_ts_usec</UnixTimeUsecLeafName>
+        <StartTimeLeafName>event_start_t</StartTimeLeafName>
+        <EndTimeLeafName>event_end_t</EndTimeLeafName>
         <MCIdLeafName>mcp_id</MCIdLeafName>
         <MCLocalIdLeafName>mcp_idLocal</MCLocalIdLeafName>
         <EventsToSkip>0</EventsToSkip>
     </algorithm>
 ```
 
-Here, `EventFileName` needs to match the input file name specified by the `-e` run parameter, `EventTreeName` defines what TTree
-contains the event numbers (which defaults to `events`) and `EventLeafName` defines the name of the event number variable
+Here, `EventFileName` is the file containing the event numbers, `EventTreeName` defines what TTree
+contains them (which defaults to `events`) and `EventLeafName` defines the name of the event number variable
 (which defaults to `event`). This workaround is needed since it is currently not possible to pass event (and run) information
-between Pandora algorithms. By default, no events are skipped, but if the `-s` run option is used, then `EventsToSkip` must be equal
-to this integer to ensure that the correct event numbers are found. The additional parameters `RunLeafName` and `SubRunLeafName`
-define the run and sub-run numbers, `UnixTimeLeafName` defines the trigger unix time variable name (units in seconds), while
-`StartTimeLeafName` and `EndTimeLeafName` define the decimal start and end time variables (units in ticks = 0.1 microseconds),
-respectively. If these are not provided, then they will all be set to zero. Finally, `MCIdLeafName` and `MCLocalIdLeafName`
-define the variable names used for the unique and local MC truth matching IDs. The unique IDs are used internally by Pandora's
-Hierarchy Tools while the local ones are used by the CAF truth matching. A map is used to retrieve the local ID values given
-the unique ID numbers. If these MC ID variable names are not provided, then only the unique MC IDs are used (the local IDs are
-set equal to them), meaning that the CAF truth matching will be incomplete.
+between Pandora algorithms. `PandoraInterface` passes the input file given by the `-e` run parameter, the number of events skipped by
+the `-s` run option and (for the `SP` and `SPMC` formats) the tree name given by `-k` directly to this algorithm, and these take
+precedence over `EventFileName`, `EventsToSkip` and `EventTreeName` in the xml. So no link to the input file is needed, and the xml
+values are only used if the algorithm is run without these (e.g. `EventFileName` can be a link called `LArRecoNDInput.root`).
+The additional parameters `RunLeafName` and `SubRunLeafName` define the run and sub-run numbers, `UnixTimeLeafName` defines the
+trigger unix time variable name (units in seconds), while `StartTimeLeafName` and `EndTimeLeafName` define the decimal start
+and end time variables (units in ticks = 0.1 microseconds), respectively. If these are not provided, then they will all be set
+to zero. Finally, `MCIdLeafName` and `MCLocalIdLeafName` define the variable names used for the unique and local MC truth matching IDs.
+The unique IDs are used internally by Pandora's Hierarchy Tools while the local ones are used by the CAF truth matching.
+A map is used to retrieve the local ID values given the unique ID numbers. If these MC ID variable names are not provided,
+then only the unique MC IDs are used (the local IDs are set equal to them), meaning that the CAF truth matching will be incomplete.
 
 The xml settings files [PandoraSettings_LArRecoND_ThreeD.xml](settings/PandoraSettings_LArRecoND_ThreeD.xml) and
 [PandoraSettings_LArRecoND_ThreeD_DLVtx.xml](settings/PandoraSettings_LArRecoND_ThreeD_DLVtx.xml) contain

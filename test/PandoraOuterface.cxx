@@ -536,7 +536,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                     if (parameters.applyThreshold && pandoraIn->m_recoHitE->at(idxHits) < parameters.thresholdVal)
                         continue;
                     CartesianVector thisHit(pandoraIn->m_recoHitX->at(idxHits), pandoraIn->m_recoHitY->at(idxHits), pandoraIn->m_recoHitZ->at(idxHits));
-                    lar_content::LArCaloHitParameters chParams;
+                    lar_content::LArHitParameters chParams;
                     chParams.m_positionVector = thisHit;
                     chParams.m_expectedDirection = pandora::CartesianVector(0.f, 0.f, 1.f);
                     chParams.m_cellNormalVector = pandora::CartesianVector(0.f, 0.f, 1.f);
@@ -648,7 +648,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                         for (unsigned int idxPt = 0; idxPt < trackStateVector.size(); ++idxPt)
                         {
                             const lar_content::LArTrackState &trackState = trackStateVector.at(idxPt);
-                            lar_content::LArCaloHitParameters chParams;
+                            lar_content::LArHitParameters chParams;
                             chParams.m_positionVector = trackState.GetCaloHit()->GetPositionVector();
                             chParams.m_expectedDirection = pandora::CartesianVector(0.f, 0.f, 1.f);
                             chParams.m_cellNormalVector = pandora::CartesianVector(0.f, 0.f, 1.f);
@@ -707,7 +707,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                             // Step 2-3
                             if (caloHitVect_tmp.size() == 1)
                             {
-                                lar_content::LArCaloHitParameters chParams;
+                                lar_content::LArHitParameters chParams;
                                 chParams.m_positionVector = caloHitVect_tmp.at(0)->GetPositionVector();
                                 chParams.m_expectedDirection = pandora::CartesianVector(0.f, 0.f, 1.f);
                                 chParams.m_cellNormalVector = pandora::CartesianVector(0.f, 0.f, 1.f);
@@ -806,7 +806,7 @@ void ProcessPostReco(const ParameterStruct &parameters)
                                         newHitY /= newHitQ;
                                         newHitZ /= newHitQ;
                                     }
-                                    lar_content::LArCaloHitParameters chParams;
+                                    lar_content::LArHitParameters chParams;
                                     chParams.m_positionVector = {newHitX, newHitY, newHitZ};
                                     chParams.m_expectedDirection = pandora::CartesianVector(0.f, 0.f, 1.f);
                                     chParams.m_cellNormalVector = pandora::CartesianVector(0.f, 0.f, 1.f);

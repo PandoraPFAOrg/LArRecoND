@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(LArRecoND VERSION 01.06.00 LANGUAGES CXX)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
+endif()
+
 # Automatically add the path of the linked libraries to the RPATH
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 

@@ -80,15 +80,124 @@ StatusCode MasterThreeDAlgorithm::Run()
         if (m_shouldRunCosmicRecoOption)
             PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->CopyMCParticles(m_pSliceCRWorkerInstance));
 
-        SliceHypotheses nuSliceHypotheses, crSliceHypotheses;
-        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RunSliceReconstruction(sliceVector, nuSliceHypotheses, crSliceHypotheses));
-        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->SelectBestSliceHypotheses(nuSliceHypotheses, crSliceHypotheses));
+        if (m_shouldRunNeutrinoRecoOption && m_shouldRunCosmicRecoOption && m_shouldPerformSliceId && !m_sliceIdToolVector.empty())
+        {
+            PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RunSliceReconstructionAndSelectionPerSlice(sliceVector));
+        }
+        else
+        {
+            SliceHypotheses nuSliceHypotheses, crSliceHypotheses;
+            PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->RunSliceReconstruction(sliceVector, nuSliceHypotheses, crSliceHypotheses));
+            PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->SelectBestSliceHypotheses(nuSliceHypotheses, crSliceHypotheses));
+        }
     }
 
     return STATUS_CODE_SUCCESS;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
+
+StatusCode MasterThreeDAlgorithm::RunSliceReconstructionAndSelectionPerSlice(SliceVector &sliceVector) const
+{
+    // INFO: This is essentially the same as RunSliceReconstruction, but it runs in a single slice mode.
+    //  I.e. Instead of "Reco All Slices -> Select Best Hypotheses", it does
+    //  "Reco 1 -> Select 1 -> Reco 2 -> Select 2 -> ...".
+    //
+    // This is advantageous in cases where there is a large number of slices, such as ND-LAr,
+    // but is not appropriate in cases where the slice selection tool needs to see all slices at once, say to apply
+    // a "max number of neutrinos" cut across all slices.
+    const SliceVector selectedSliceVector(this->SelectSlices(sliceVector));
+    unsigned int sliceCounter(0);
+
+    for (const CaloHitList &sliceHits : selectedSliceVector)
+    {
+        const std::string sliceLabel(std::to_string(sliceCounter + 1) + " of " + std::to_string(selectedSliceVector.size()));
+        PfoList sliceNuPfos, sliceCRPfos;
+
+        if (m_printOverallRecoStatus)
+            std::cout << "Running nu worker instance for slice " << sliceLabel << std::endl;
+
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->ReconstructSlice(m_pSliceNuWorkerInstance, sliceHits, sliceCounter, sliceNuPfos));
+
+        if (m_printOverallRecoStatus)
+            std::cout << "Running cr worker instance for slice " << sliceLabel << std::endl;
+
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->ReconstructSlice(m_pSliceCRWorkerInstance, sliceHits, sliceCounter, sliceCRPfos));
+
+        // Choose this slice's hypothesis and recreate only that one in the master instance
+        // ATTN The tools only ever see this one slice, e.g. a cap on the number of neutrinos applies per slice and so never bites
+        const SliceHypotheses nuHypotheses(1, sliceNuPfos), crHypotheses(1, sliceCRPfos);
+        PfoList selectedSlicePfos;
+
+        for (SliceIdBaseTool *const pSliceIdTool : m_sliceIdToolVector)
+            pSliceIdTool->SelectOutputPfos(this, nuHypotheses, crHypotheses, selectedSlicePfos);
+
+        PfoList newSlicePfoList;
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, MasterAlgorithm::Recreate(selectedSlicePfos, newSlicePfoList));
+
+        // The workers can now be reset (keeping the MC particles), so they do not accumulate the hits, mc relationships and pfos
+        // of every previous slice
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::ResetKeepingMCParticles(*m_pSliceNuWorkerInstance));
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::ResetKeepingMCParticles(*m_pSliceCRWorkerInstance));
+
+        ++sliceCounter;
+    }
+
+    return STATUS_CODE_SUCCESS;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+SliceVector MasterThreeDAlgorithm::SelectSlices(const SliceVector &sliceVector) const
+{
+    if (!m_shouldRunSlicing || m_sliceSelectionToolVector.empty())
+        return sliceVector;
+
+    SliceVector inputSliceVector(sliceVector);
+    SliceVector selectedSliceVector;
+
+    for (SliceSelectionBaseTool *const pSliceSelectionTool : m_sliceSelectionToolVector)
+    {
+        pSliceSelectionTool->SelectSlices(this, inputSliceVector, selectedSliceVector);
+        inputSliceVector = selectedSliceVector;
+    }
+
+    return selectedSliceVector;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+StatusCode MasterThreeDAlgorithm::ReconstructSlice(
+    const Pandora *const pWorkerInstance, const CaloHitList &sliceHits, const unsigned int sliceIndex, PfoList &slicePfos) const
+{
+    for (const CaloHit *const pSliceCaloHit : sliceHits)
+    {
+        const bool isOpticalHit(pSliceCaloHit->GetHitType() == OPTICAL);
+        // ATTN Must ensure we copy the hit actually owned by master instance; access differs with/without slicing enabled
+        // ATTN Optical hits are always master-owned regardless of slicing mode (for now).
+        const CaloHit *const pCaloHitInMaster(
+            (m_shouldRunSlicing && !isOpticalHit) ? static_cast<const CaloHit *>(pSliceCaloHit->GetParentAddress()) : pSliceCaloHit);
+
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, this->Copy(pWorkerInstance, pCaloHitInMaster));
+    }
+
+    const PfoList *pWorkerPfos(nullptr);
+    PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::ProcessEvent(*pWorkerInstance));
+    PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::GetCurrentPfoList(*pWorkerInstance, pWorkerPfos));
+    slicePfos = *pWorkerPfos;
+
+    for (const ParticleFlowObject *const pPfo : slicePfos)
+    {
+        PandoraContentApi::ParticleFlowObject::Metadata metadata;
+        metadata.m_propertiesToAdd["SliceIndex"] = sliceIndex;
+        PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::ParticleFlowObject::AlterMetadata(*this, pPfo, metadata));
+    }
+
+    return STATUS_CODE_SUCCESS;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
 StatusCode MasterThreeDAlgorithm::TagCosmicRayPfos(const PfoToFloatMap &stitchedPfosToX0Map, PfoList &clearCosmicRayPfos, PfoList &ambiguousPfos) const
 {
 
@@ -106,8 +215,7 @@ StatusCode MasterThreeDAlgorithm::TagCosmicRayPfos(const PfoToFloatMap &stitched
     for (RockMuonTaggingTool *const pRockMuonTaggingTool : m_rockMuonTaggingToolVector)
         pRockMuonTaggingTool->FindAmbiguousPfos(ambiguousPfos_wRock, ambiguousPfos, this);
 
-    // filter ambiguousPfos form rocks
-
+    // Filter ambiguousPfos from rock muons.
     const PfoList *pRecreatedCRPfos(nullptr);
     PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraApi::GetCurrentPfoList(this->GetPandora(), pRecreatedCRPfos));
 
@@ -140,7 +248,7 @@ StatusCode MasterThreeDAlgorithm::CopyMCParticles(const Pandora *pPandora) const
     if (!m_passMCParticlesToWorkerInstances)
         return STATUS_CODE_SUCCESS;
 
-    // ATTN: If we are passing MC, but the instance isn't initalised, report an error.
+    // ATTN: If we are passing MC, but the instance isn't initialised, report an error.
     if (!pPandora)
         return STATUS_CODE_NOT_INITIALIZED;
 
@@ -209,7 +317,7 @@ StatusCode MasterThreeDAlgorithm::RunCosmicRayReconstructionThenRecreate(const V
 
         if (workerIter == m_workerToLArTPCMap.end())
         {
-            std::cout << "Problem: worker_id " << workerId << "not present in the m_workerToLArTPCMap. Skipping this worker.\n";
+            std::cout << "Problem: worker_id " << workerId << " not present in the m_workerToLArTPCMap. Skipping this worker." << std::endl;
             continue;
         }
 
@@ -475,12 +583,16 @@ const Pandora *MasterThreeDAlgorithm::CreateWorkerInstance(const LArTPCMap &larT
         parentMaxZ = std::max(parentMaxZ, pLArTPC->GetCenterZ() + 0.5f * pLArTPC->GetWidthZ());
     }
 
-    std::cout << "Creating worker instance " << name << " with boundaries X = (" << parentMinX << ", " << parentMaxX << ") , Y = ("
-              << parentMinY << ", " << parentMaxY << ") , Z = (" << parentMinZ << ", " << parentMaxZ << ")";
-    std::cout << " worker's tpcs : ";
-    for (const int tpc_id : lof_tpcs)
-        std::cout << tpc_id << ",";
-    std::cout << "\n";
+    if (m_printOverallRecoStatus)
+    {
+        std::cout << "Creating Worker Instance " << name << " with boundaries X = (" << parentMinX << ", " << parentMaxX << "), Y = ("
+                << parentMinY << ", " << parentMaxY << "), Z = (" << parentMinZ << ", " << parentMaxZ << ")";
+        std::cout << " based on TPCs with IDs: ";
+
+        for (const int tpc_id : lof_tpcs)
+            std::cout << tpc_id << ",";
+        std::cout << std::endl;
+    }
 
     PandoraApi::Geometry::LArTPC::Parameters larTPCParameters;
     larTPCParameters.m_larTPCVolumeId = id;

@@ -695,6 +695,24 @@ StatusCode HierarchyAnalysisAlgorithm::ReadSettings(const TiXmlHandle xmlHandle)
 
     PANDORA_RETURN_RESULT_IF_AND_IF(STATUS_CODE_SUCCESS, STATUS_CODE_NOT_FOUND, !=, XmlHelper::ReadValue(xmlHandle, "MinHitsToSkip", m_minHitsToSkip));
 
+    // ATTN: If we have external parameters, populated from the CLI, then override the XML settings with those values
+    if (this->ExternalParametersPresent())
+    {
+        const ExternalEventFileParameters *const pExternalParameters(dynamic_cast<ExternalEventFileParameters *>(this->GetExternalParameters()));
+
+        if (!pExternalParameters)
+            return STATUS_CODE_FAILURE;
+
+        if (pExternalParameters->m_eventFileName.IsInitialized())
+            m_eventFileName = pExternalParameters->m_eventFileName.Get();
+
+        if (pExternalParameters->m_eventTreeName.IsInitialized())
+            m_eventTreeName = pExternalParameters->m_eventTreeName.Get();
+
+        if (pExternalParameters->m_eventsToSkip.IsInitialized())
+            m_eventsToSkip = pExternalParameters->m_eventsToSkip.Get();
+    }
+
     // Setup the event ROOT file
     if (m_eventFileName.size() > 0)
     {

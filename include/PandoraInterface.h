@@ -398,9 +398,9 @@ float GetMCEnergyFraction(const MCParticleEnergyMap &mcEnergyMap, const float vo
  *
  *  @param  voxelWidth size of the voxelisation used
  *
- *  @return LArCaloHitParameters object
+ *  @return LArHitParameters object
  */
-lar_content::LArCaloHitParameters MakeDefaultCaloHitParams(float voxelWidth);
+lar_content::LArHitParameters MakeDefaultCaloHitParams(float voxelWidth);
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
