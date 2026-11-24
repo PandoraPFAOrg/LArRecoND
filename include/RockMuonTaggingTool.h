@@ -40,13 +40,17 @@ public:
 
 private:
     /**
-     *  @brief Check if a 3D point is inside the detector boundaies with margins 
+     *  @brief  Find which detector face a 3D point is close to, within the configured margins
      *
      *  @param  x point x coordinate
      *  @param  y point y coordinate
      *  @param  z point z coordinate
+     *
+     *  @return 0 = left (Xa), 1 = right (Xc), 2 = bottom (Yb), 3 = top (Yt), 4 = upstream (Zu), 5 = downstream (Zd),
+     *          or -1 if the point is not close to any face. If the point is close to more than one face (edge or corner),
+     *          the first match in the order X, Y, Z is returned.
      */
-    bool IsOutsideBox(const float x, const float y, const float z) const;
+    int GetNearFace(const float x, const float y, const float z) const;
 
     /**
      *  @brief  Check if each candidate is throughgoing (i.e emerging and exiting from any of the detector boundaies)

@@ -20,6 +20,7 @@
         <SlicingSettingsFile>PandoraSettings_Slicing_ThreeD.xml</SlicingSettingsFile>
         <ShouldRunRockMus_Xworkers>true</ShouldRunRockMus_Xworkers>
         <TagRockMuons>true</TagRockMuons>
+        <InTimeMaxX0>3</InTimeMaxX0>
         <StitchingTools>
           <tool type = "LArStitchingCosmicRayMerging">
             <ThreeDStitchingMode>true</ThreeDStitchingMode>
@@ -32,8 +33,9 @@
         </StitchingTools>
         <CosmicRayTaggingTools>
           <tool type = "LArCosmicRayTagging">
-            <CutMode>cautious</CutMode>
-          </tool>
+	    <CutMode>cautious</CutMode>
+	    <InTimeMaxX0>3</InTimeMaxX0>
+	  </tool>
         </CosmicRayTaggingTools>
         <RockMuonTaggingTools>
           <tool type = "LArRockMuonTagging">

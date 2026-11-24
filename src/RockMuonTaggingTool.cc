@@ -26,7 +26,8 @@ RockMuonTaggingTool::RockMuonTaggingTool() :
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
-bool RockMuonTaggingTool::IsOutsideBox(const float x, const float y, const float z) const
+//------------------------------------------------------------------------------------------------------------------------------------------
+int RockMuonTaggingTool::GetNearFace(const float x, const float y, const float z) const
 {
     const float BoxXmin = m_face_Xa + m_marginX;
     const float BoxXmax = m_face_Xc - m_marginX;
@@ -37,19 +38,29 @@ bool RockMuonTaggingTool::IsOutsideBox(const float x, const float y, const float
     const float BoxZmin = m_face_Zu + m_marginZ;
     const float BoxZmax = m_face_Zd - m_marginZ;
 
-    const bool IsOutRangeX = (x < BoxXmin || x > BoxXmax);
-    const bool IsOutRangeY = (y < BoxYmin || y > BoxYmax);
-    const bool IsOutRangeZ = (z < BoxZmin || z > BoxZmax);
+    if (x < BoxXmin) return 0; // detector left face
+    if (x > BoxXmax) return 1; // detector right face
 
-    return (IsOutRangeZ || IsOutRangeY || IsOutRangeX);
+    if (y < BoxYmin) return 2; // detector bottom face
+    if (y > BoxYmax) return 3; // detector top face
+
+    if (z < BoxZmin) return 4; // detector upstream face
+    if (z > BoxZmax) return 5; // detector downstream face
+
+    return -1; // not close to any face (inside the box)
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 bool RockMuonTaggingTool::CheckIfThroughgoing(const CRCandidate &candidate) const
 {
-    return ((candidate.m_endPoint1.GetX() != std::numeric_limits<float>::max()) && // candidates whose sliding fit fails, have default values set as inf
-        IsOutsideBox(candidate.m_endPoint1.GetX(), candidate.m_endPoint1.GetY(), candidate.m_endPoint1.GetZ()) &&
-        IsOutsideBox(candidate.m_endPoint2.GetX(), candidate.m_endPoint2.GetY(), candidate.m_endPoint2.GetZ()));
+    // candidates whose sliding fit fails have default values set to max()
+    if (candidate.m_endPoint1.GetX() == std::numeric_limits<float>::max())
+        return false;
+
+    const int face1 = this->GetNearFace(candidate.m_endPoint1.GetX(), candidate.m_endPoint1.GetY(), candidate.m_endPoint1.GetZ());
+    const int face2 = this->GetNearFace(candidate.m_endPoint2.GetX(), candidate.m_endPoint2.GetY(), candidate.m_endPoint2.GetZ());
+
+    return (face1 != -1) && (face2 != -1) && (face1 != face2);
 }
 
 //----------------------------------------------------- -------------------------------------------------------------------------------------
