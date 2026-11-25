@@ -11,3 +11,6 @@
 
 # Compiler + LSP caches
 .cache/
+
+# macOS
+.DS_Store

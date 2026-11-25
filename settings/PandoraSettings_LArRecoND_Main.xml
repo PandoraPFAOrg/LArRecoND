@@ -1,0 +1,31 @@
+<pandora>
+    <!-- GLOBAL SETTINGS -->
+    <IsMonitoringEnabled>true</IsMonitoringEnabled>
+    <ShouldDisplayAlgorithmInfo>false</ShouldDisplayAlgorithmInfo>
+    <SingleHitTypeClusteringMode>true</SingleHitTypeClusteringMode>
+
+   <algorithm type = "LArCreateMainNDLists">
+        <OutputCaloHitListNameU>CaloHitListU</OutputCaloHitListNameU>
+        <OutputCaloHitListNameV>CaloHitListV</OutputCaloHitListNameV>
+        <OutputCaloHitListNameW>CaloHitListW</OutputCaloHitListNameW>
+        <OutputCaloHitListName3D>CaloHitList3D</OutputCaloHitListName3D>
+	<RecreatedPfoListName>MainPFOs</RecreatedPfoListName>
+	<RecreatedClusterListName>MainClusters</RecreatedClusterListName>
+	<RecreatedVertexListName>MainVertices</RecreatedVertexListName>
+   </algorithm>
+   
+    <!-- EVENT DISPLAY-->
+    <algorithm type = "LArVisualMonitoring">
+        <CaloHitListNames>CaloHitListU CaloHitListV CaloHitListW CaloHitList3D</CaloHitListNames>
+        <ShowDetector>true</ShowDetector>
+    </algorithm>
+
+    <!-- EVENT DISPLAY-->
+    <algorithm type = "LArVisualMonitoring">
+      <ShowCurrentPfos>true</ShowCurrentPfos>
+      <PfoListNames>MainPFOs</PfoListNames>
+      <ShowDetector>true</ShowDetector>
+    </algorithm>
+
+</pandora>
+

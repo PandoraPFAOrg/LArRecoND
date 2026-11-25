@@ -1,5 +1,5 @@
 /**
- *  @file   LArReco/validation/NewValidation.h
+ *  @file   validation/Validation.h
  *
  *  @brief  Header file for validation functionality
  *
@@ -498,10 +498,10 @@ public:
      */
     TargetHistogramCollection();
 
-    TH1F *m_hVtxDeltaX = nullptr; ///< The vtx delta x histogram
-    TH1F *m_hVtxDeltaY = nullptr; ///< The vtx delta y histogram
-    TH1F *m_hVtxDeltaZ = nullptr; ///< The vtx delta z histogram
-    TH1F *m_hVtxDeltaR = nullptr; ///< The vtx delta r histogram
+    TH1F *m_hVtxDeltaX = nullptr;  ///< The vtx delta x histogram
+    TH1F *m_hVtxDeltaY = nullptr;  ///< The vtx delta y histogram
+    TH1F *m_hVtxDeltaZ = nullptr;  ///< The vtx delta z histogram
+    TH1F *m_hVtxDeltaR = nullptr;  ///< The vtx delta r histogram
     TH2F *m_hVtxDeltaXY = nullptr; ///< The vtx delta x-y 2D histogram
     TH2F *m_hVtxDeltaZY = nullptr; ///< The vtx delta z-y 2D histogram
     TH2F *m_hVtxDeltaZX = nullptr; ///< The vtx delta z-x 2D histogram
@@ -705,7 +705,10 @@ SimpleThreeVector::SimpleThreeVector() :
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-SimpleThreeVector::SimpleThreeVector(const float x, const float y, const float z) : m_x(x), m_y(y), m_z(z)
+SimpleThreeVector::SimpleThreeVector(const float x, const float y, const float z) :
+    m_x(x),
+    m_y(y),
+    m_z(z)
 {
 }
 
@@ -788,14 +791,23 @@ SimpleMCTarget::SimpleMCTarget() :
 //------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-SimpleMCEvent::SimpleMCEvent() : m_fileIdentifier(-1), m_eventNumber(0), m_nMCTargets(0)
+SimpleMCEvent::SimpleMCEvent() :
+    m_fileIdentifier(-1),
+    m_eventNumber(0),
+    m_nMCTargets(0)
 {
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-CountingDetails::CountingDetails() : m_nTotal(0), m_nMatch0(0), m_nMatch1(0), m_nMatch2(0), m_nMatch3Plus(0), m_correctId(0)
+CountingDetails::CountingDetails() :
+    m_nTotal(0),
+    m_nMatch0(0),
+    m_nMatch1(0),
+    m_nMatch2(0),
+    m_nMatch3Plus(0),
+    m_correctId(0)
 {
 }
 

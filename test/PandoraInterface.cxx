@@ -1,24 +1,20 @@
 /**
- *  @file   LArRecoMP/test/PandoraInterface.cc
+ *  @file   test/PandoraInterface.cxx
  *
  *  @brief  Implementation of the lar reco mp application
  *
  *  $Log: $
  */
 
-#include "TFile.h"
-#include "TTree.h"
-
-#include "TGeoBBox.h"
-#include "TGeoManager.h"
-#include "TGeoMatrix.h"
-#include "TGeoShape.h"
-#include "TGeoVolume.h"
+#include <algorithm>
+#include <cmath>
+#include <getopt.h>
+#include <iostream>
+#include <memory>
+#include <random>
 #include <regex>
-
-#ifdef USE_EDEPSIM
-#include "TG4PrimaryVertex.h"
-#endif
+#include <string>
+#include <vector>
 
 #include "Api/PandoraApi.h"
 #include "Geometry/LArTPC.h"
@@ -39,23 +35,29 @@
 #include "larpandoradlcontent/LArDLContent.h"
 #endif
 
-#include "LArNDContent.h"
-#include "LArNDGeomSimple.h"
-#include "LArRay.h"
+#include "larrecond/LArHelpers/NDNuanceHelper.h"
+#include "larrecond/LArNDContent.h"
+#include "larrecond/LArObjects/LArNDGeomSimple.h"
+#include "larrecond/LArObjects/LArRay.h"
+
 #include "PandoraInterface.h"
 
 #ifdef MONITORING
 #include "TApplication.h"
 #endif
 
-#include <algorithm>
-#include <cmath>
-#include <getopt.h>
-#include <iostream>
-#include <memory>
-#include <random>
-#include <string>
-#include <vector>
+#include "TFile.h"
+#include "TTree.h"
+
+#include "TGeoBBox.h"
+#include "TGeoManager.h"
+#include "TGeoMatrix.h"
+#include "TGeoShape.h"
+#include "TGeoVolume.h"
+
+#ifdef USE_EDEPSIM
+#include "TG4PrimaryVertex.h"
+#endif
 
 using namespace pandora;
 using namespace lar_nd_reco;
@@ -412,19 +414,19 @@ void ProcessSPEvents(const Parameters &parameters, const Pandora *const pPrimary
             int tpcID = -1;
             if ((70 == geom.m_TPCs.size()) && (voxel_io_group >= 0)) // NDLAr
             {
-              tpcID = ioGroup2tcpIDMap_NDLAr(voxel_io_group);
+                tpcID = ioGroup2tcpIDMap_NDLAr(voxel_io_group);
             }
             else if ((4 == geom.m_TPCs.size()) && (voxel_io_group >= 0)) // 2x2
             {
-              tpcID = ioGroup2tcpIDMap_2x2[voxel_io_group];
+                tpcID = ioGroup2tcpIDMap_2x2[voxel_io_group];
             }
             else if ((2 == geom.m_TPCs.size()) && (voxel_io_group >= 0)) // FSD
             {
-              tpcID = ioGroup2tcpIDMap_FSD[voxel_io_group];
+                tpcID = ioGroup2tcpIDMap_FSD[voxel_io_group];
             }
             else
             {
-              tpcID = geom.GetTPCNumber(voxelPos);
+                tpcID = geom.GetTPCNumber(voxelPos);
             }
 
             lar_content::LArCaloHitParameters caloHitParameters;
@@ -750,7 +752,7 @@ void ProcessEDepSimEvents(const Parameters &parameters, const Pandora *const pPr
         // Loop over (EDep) hits, which are stored in the hit segment detectors.
         // Only process hits from the detector we are interested in
         for (TG4HitSegmentDetectors::iterator detector = pEDepSimEvent->SegmentDetectors.begin();
-             detector != pEDepSimEvent->SegmentDetectors.end(); ++detector)
+            detector != pEDepSimEvent->SegmentDetectors.end(); ++detector)
         {
             if (detector->first.find(parameters.m_sensitiveDetName) == std::string::npos)
             {
@@ -1226,122 +1228,6 @@ void CreateSEDMCParticles(const LArSED &larsed, const pandora::Pandora *const pP
                 PandoraApi::SetMCParentDaughterRelationship(*pPrimaryPandora, (void *)((intptr_t)parentID), (void *)((intptr_t)trackID)));
         }
     }
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-int GetNuanceCode(const std::string &reaction)
-{
-    // The GENIE reaction string (also stored by edep-sim) is created using
-    // https://github.com/GENIE-MC/Generator/blob/master/src/Framework/Interaction/Interaction.cxx#L249
-    // String format is "nu:PDGId;tgt:PDGId;N:PDGId;proc:interactionType,scattering;", e.g.
-    //                  "nu:14;tgt:1000180400;N:2112;proc:Weak[CC],QES;"
-
-    // GENIE scattering codes:
-    // https://github.com/GENIE-MC/Generator/blob/master/src/Framework/Interaction/ScatteringType.h
-
-    // Nuance codes:
-    // https://internal.dunescience.org/doxygen/MCNeutrino_8h_source.html
-
-    // GENIE conversion code for RooTracker output files:
-    // https://github.com/GENIE-MC/Generator/blob/master/src/contrib/t2k/neut_code_from_rootracker.C
-    // Similar code is available here (Neut reaction code):
-    // https://internal.dunescience.org/doxygen/namespacegenie_1_1utils_1_1ghep.html
-
-    // For now, just set the basic reaction types, excluding any specific final states:
-    // https://github.com/GENIE-MC/Generator/blob/master/src/contrib/t2k/neut_code_from_rootracker.C#L276
-    int code(1000);
-
-    const bool is_cc = (reaction.find("Weak[CC]") != std::string::npos); // weak charged-current
-    const bool is_nc = (reaction.find("Weak[NC]") != std::string::npos); // weak neutral-current
-    // const bool is_charm = (reaction.find("charm")    != std::string::npos); // charm production
-    const bool is_qel = (reaction.find("QES") != std::string::npos);   // quasi-elastic scattering
-    const bool is_dis = (reaction.find("DIS") != std::string::npos);   // deep inelastic scattering
-    const bool is_res = (reaction.find("RES") != std::string::npos);   // resonance
-    const bool is_cohpi = (reaction.find("COH") != std::string::npos); // coherent pi
-    const bool is_ve = (reaction.find("NuEEL") != std::string::npos);  // nu e elastic
-    const bool is_imd = (reaction.find("IMD") != std::string::npos);   // inverse mu decay
-    const bool is_mec = (reaction.find("MEC") != std::string::npos);   // meson exchange current
-
-    if (is_qel)
-    {
-        code = 0;
-        if (is_cc)
-            code = 1001;
-        else if (is_nc)
-            code = 1002;
-    }
-    else if (is_dis)
-    {
-        code = 2;
-        if (is_cc)
-            code = 1091;
-        else if (is_nc)
-            code = 1092;
-    }
-    else if (is_res)
-        code = 1;
-    else if (is_cohpi)
-    {
-        code = 3;
-        if (is_qel)
-            code = 4;
-    }
-    else if (is_ve)
-        code = 1098;
-    else if (is_imd)
-        code = 1099;
-    else if (is_mec)
-        code = 10;
-
-    // std::cout << "Reaction " << reaction << " has code = " << code << std::endl;
-
-    return code;
-}
-
-std::string GetNuanceReaction(const int ccnc, const int mode)
-{
-    std::string reaction("");
-
-    if (mode == 0)
-    {
-        reaction = "QES";
-    }
-    else if (mode == 2)
-    {
-        reaction = "DIS";
-    }
-    else if (mode == 1)
-    {
-        reaction = "RES";
-    }
-    else if (mode == 3)
-    {
-        reaction = "COH";
-    }
-    else if (mode == 5)
-    {
-        reaction = "NuEEL";
-    }
-    else if (mode == 6)
-    {
-        reaction = "IMD";
-    }
-    else if (mode == 10)
-    {
-        reaction = "MEC";
-    }
-
-    if (ccnc == 0)
-    {
-        reaction += "Weak[CC]";
-    }
-    else if (ccnc == 1)
-    {
-        reaction += "Weak[NC]";
-    }
-
-    return reaction;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------

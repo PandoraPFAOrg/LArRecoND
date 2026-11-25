@@ -60,7 +60,7 @@ set(LAR_RECO_COMPILE_OPTIONS
 )
 
 # Build products
-file(GLOB_RECURSE LAR_RECO_ND_SRCS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.cc")
+file(GLOB_RECURSE LAR_RECO_ND_SRCS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/larrecond/*.cc")
 
 add_library(${PROJECT_NAME} SHARED ${LAR_RECO_ND_SRCS})
 
@@ -71,7 +71,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
 
 target_compile_options(${PROJECT_NAME} PRIVATE ${LAR_RECO_COMPILE_OPTIONS})
 
@@ -98,43 +101,45 @@ endif()
 set(LAR_RECO_EXECUTABLES
     PandoraInterface
     PandoraOuterface
+    LArRecoNDApp
 )
 
-foreach(executable_name IN LISTS LAR_RECO_EXECUTABLES)
-    add_executable(${executable_name} test/${executable_name}.cxx)
+foreach(exe_name IN LISTS LAR_RECO_EXECUTABLES)
 
-    set_target_properties(${executable_name} PROPERTIES
+    add_executable(${exe_name} ${PROJECT_SOURCE_DIR}/test/${exe_name}.cxx)
+
+    set_target_properties(${exe_name} PROPERTIES
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON
         BUILD_RPATH "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
     )
 
-    target_compile_options(${executable_name} PRIVATE ${LAR_RECO_COMPILE_OPTIONS})
+    target_compile_options(${exe_name} PRIVATE ${LAR_RECO_COMPILE_OPTIONS})
 
-    target_link_libraries(${executable_name} PRIVATE
+    target_link_libraries(${exe_name} PRIVATE
         ${PROJECT_NAME}
         PandoraPFA::PandoraSDK
         PandoraPFA::LArContent
     )
 
     if(PANDORA_LIBTORCH)
-        target_link_libraries(${executable_name} PRIVATE PandoraPFA::LArDLContent)
-        target_compile_definitions(${executable_name} PRIVATE LIBTORCH_DL=1)
+        target_link_libraries(${exe_name} PRIVATE PandoraPFA::LArDLContent)
+        target_compile_definitions(${exe_name} PRIVATE LIBTORCH_DL=1)
     endif()
 
     if(PANDORA_MONITORING)
-        target_link_libraries(${executable_name} PRIVATE
+        target_link_libraries(${exe_name} PRIVATE
             PandoraPFA::PandoraMonitoring
             ROOT::Eve
             ROOT::Geom
             ROOT::RGL
             ROOT::EG
         )
-        target_compile_definitions(${executable_name} PRIVATE MONITORING)
+        target_compile_definitions(${exe_name} PRIVATE MONITORING)
     endif()
 
     if(USE_EDEPSIM)
-        target_compile_definitions(${executable_name} PRIVATE USE_EDEPSIM)
+        target_compile_definitions(${exe_name} PRIVATE USE_EDEPSIM)
     endif()
 endforeach()
 
@@ -148,7 +153,7 @@ if(LArRecoND_BUILD_DOCS)
 endif()
 
 # Installation
-install(DIRECTORY include/ DESTINATION include COMPONENT Development FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY larrecond DESTINATION include COMPONENT Development FILES_MATCHING PATTERN "*.h")
 install(TARGETS ${PROJECT_NAME} DESTINATION lib COMPONENT Runtime)
 foreach(executable_name IN LISTS LAR_RECO_EXECUTABLES)
     install(TARGETS ${executable_name} DESTINATION bin PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

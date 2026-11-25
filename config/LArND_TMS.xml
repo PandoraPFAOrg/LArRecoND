@@ -1,0 +1,37 @@
+<pandora>
+  <Main>
+    <Settings>PandoraSettings_LArRecoND_Main.xml</Settings>
+    <Instances>LArND TMS</Instances>
+    <EventsToProcess>1</EventsToProcess>
+    <EventsToSkip>0</EventsToSkip>
+    <MaxNHits>-1</MaxNHits>
+    <MinNHits>2</MinNHits>
+    <RecoOption>AllHitsSliceNu</RecoOption>
+    <ViewOption>Both</ViewOption>
+  </Main>
+  <LArND>
+    <VolType>LArND</VolType>
+    <Settings>PandoraSettings_LArRecoND_ThreeD_Evt.xml</Settings>
+    <InputFile>data/ND-LAr/MicroProdN3p1_NDLAr_2E18_FHC.flow.nu.0000001.FLOW.hdf5_hits_withMC.root</InputFile>
+    <InputTree>events</InputTree>
+    <DataFormat>SP</DataFormat>
+    <GeomFile>data/ND-LAr/NDLArGeom.root</GeomFile>
+    <GeomManager>Default</GeomManager>
+    <TPCName>volTPCActive</TPCName>
+    <LengthScale>1.0</LengthScale>
+    <EnergyScale>1.0</EnergyScale>
+  </LArND>
+  <TMS>
+    <VolType>TMS</VolType>
+    <Settings>PandoraSettings_LArRecoND_TMS.xml</Settings>
+    <InputFile>data/ND-LAr/MicroProdN3p1_NDLAr_2E18_FHC.tmsreco.nu.0000001.TMSRECOREADOUT.root</InputFile>
+    <InputTree>TMS</InputTree>
+    <DataFormat>TMSMC</DataFormat>
+    <GeomFile>data/ND-LAr/NDLArGeom.root</GeomFile>
+    <GeomManager>Default</GeomManager>
+    <TPCName>volTMS</TPCName>
+    <LengthScale>0.1</LengthScale>
+    <EnergyScale>0.001</EnergyScale>
+    <RecoOption>AllHitsSliceCR</RecoOption>
+  </TMS>
+</pandora>

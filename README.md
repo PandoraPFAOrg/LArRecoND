@@ -83,10 +83,12 @@ source download.sh uboone
 
 ## Running LArRecoND
 
-For each new terminal/interactive session, make sure the environment is setup by first running either the
-[tags.sh](scripts/tags.sh), [Alma9_FNAL.sh](scripts/Alma9_FNAL.sh) or [SL7_FNAL.sh](scripts/SL7_FNAL.sh) scripts, where
-the optional MyTestAreaDirPath parameter sets the $MY_TEST_AREA environment variable (which defaults to the current
-working directory if this is not provided):
+For each new terminal/interactive session, make sure the environment is setup by
+first running either the [tags.sh](scripts/tags.sh),
+[Alma9_FNAL.sh](scripts/setup/Alma9_FNAL.sh) or [SL7_FNAL.sh](scripts/setup/SL7_FNAL.sh)
+scripts, where the optional MyTestAreaDirPath parameter sets the $MY_TEST_AREA
+environment variable (which defaults to the current working directory if this is
+not provided):
 
 ```Shell
 source tags.sh MyTestAreaDirPath
@@ -134,7 +136,7 @@ Python and ROOT. It does however, require some non-standard Python packages, and
 of a virtual environment. First, source the relevant setup script from `LArRecoND`, e.g. assuming Alma9 and a Fermilab gpvm:
 
 ```Shell
-source scripts/Alma9_FNAL.sh
+source scripts/setup/Alma9_FNAL.sh
 ```
 
 then
@@ -150,12 +152,14 @@ pip3 install uproot
 ```
 
 Then to run the conversion, this takes place in 2 steps:
+
 - hdf5 to ROOT: make a first ROOT file from the hdf5 file, but it is in a
-"subevent" format which may have more than 1 entry per event
+  "subevent" format which may have more than 1 entry per event
 - ROOT to ROOT: take the "subevent" level ROOT file and package it with one entry per event
 
 **STEP 1:**
 This hdf5-to-ROOT conversion works as follows:
+
 ```
 python h5_to_root_ndlarflow.py FileList IsData IsFinalHits OutName
 -- Parameters
@@ -202,7 +206,6 @@ The GDML files for the 2x2 ArgonCube-based prototype geometry are available in t
 and the current recommended file to use is
 [Merged2x2MINERvA_v4_withRock.gdml](https://github.com/DUNE/2x2_sim/blob/develop/geometry/Merged2x2MINERvA_v4/Merged2x2MINERvA_v4_withRock.gdml).
 
-
 ### 2x2 data
 
 The following example can be used to run LArRecoND 3D-clustering and 2D-projection neutrino reconstruction
@@ -218,7 +221,7 @@ where the mandatory settings `-i`, `-r`, `-e` and `-g` specify the xml steering 
 the input data ROOT file containing the hits and the geometry ROOT file, respectively. The `-n` option sets the
 number of events (in this case 10) while `-N` prints out event information.
 
-The input hit data ROOT file uses the default [SpacePoint](include/LArSP.h) format, which needs to be previously
+The input hit data ROOT file uses the default [SpacePoint](larrecond/LArObjects/LArSP.h) format, which needs to be previously
 converted from the original HDF5 format (see relevant section above):
 
 ```Shell
@@ -227,11 +230,6 @@ python ndlarflow/h5_to_root_ndlarflow.py inputHDF5File 1 outputDir
 
 where the first argument is the input HDF5 file, the second integer specifies data (1) and the final argument
 is the location of the output directory which will store the equivalent ROOT file.
-
-To use deep learning vertexing (DLVtx), make sure LArRecoND and LArContent is first built with LibTorch enabled, then use
-the [PandoraSettings_LArRecoND_ThreeD_DLVtx.xml](settings/PandoraSettings_LArRecoND_ThreeD_DLVtx.xml) settings file.
-You can tell if the DL vertexing is running if you see messages such as
-`Loaded the TorchScript model PandoraNetworkDataFileName.pt` when the first event is getting processed.
 
 ### 2x2 simulation
 
@@ -246,7 +244,7 @@ cd $MY_TEST_AREA/LArRecoND
 
 where the mandatory settings `-i`, `-r`, `-e` and `-g` specify the xml steering run file, reconstruction hit method,
 the input MC ROOT file containing the hits and the geometry ROOT file, respectively. The `-f SPMC` option sets the
-input to use the [SpacePoint MC](include/LArSPMC.h) format, which stores all of the MC truth information;
+input to use the [SpacePoint MC](larrecond/LArObjects/LArSPMC.h) format, which stores all of the MC truth information;
 this is not done by the default `-f SP` format option (the ROOT data structures are different).
 The `-n` option sets the number of events (in this case 10) while `-N` prints out event information.
 
@@ -259,17 +257,14 @@ python ndlarflow/h5_to_root_ndlarflow.py inputHDF5File 0 outputDir
 where the first argument is the input HDF5 file, the second integer specifies MC (0) and the final argument
 is the location of the output directory which will store the equivalent ROOT file.
 
-To use deep learning vertexing (DLVtx), make sure LArRecoND and LArContent is first built with LibTorch enabled, then use
-the [PandoraSettings_LArRecoND_ThreeD_DLVtx.xml](settings/PandoraSettings_LArRecoND_ThreeD_DLVtx.xml) settings file.
-
 ### Cheating
 
 It is possible to cheat various steps of the reconstruction, in which MC truth information is used to create "perfectly" reconstructed objects.
 These can then be compared with the full reconstruction objects to see which algorithms need further improvement.
 There are two cheating workflows available: fully-cheated and partially-cheated reconstruction. The fully-cheated workflow is enabled using
-the [PandoraSettings_LArRecoND_ThreeD_Cheated.xml](settings/PandoraSettings_LArRecoND_ThreeD_Cheated.xml) settings file, while the
+the [PandoraSettings_LArRecoND_ThreeD_Cheated.xml](settings/development/PandoraSettings_LArRecoND_ThreeD_Cheated.xml) settings file, while the
 partially-cheated workflow that only cheats rock muon tracks can be run using
-[PandoraSettings_LArRecoND_ThreeD_PartialCheated.xml](settings/PandoraSettings_LArRecoND_ThreeD_PartialCheated.xml).
+[PandoraSettings_LArRecoND_ThreeD_PartialCheated.xml](settings/development/PandoraSettings_LArRecoND_ThreeD_PartialCheated.xml).
 These workflows require the `SPMC` input format, since all the MC information needs to be available; they won't work for the data `SP` format.
 
 ### edep-sim
@@ -289,9 +284,6 @@ input to use the [edep-sim format](https://github.com/ClarkMcGrew/edep-sim/tree/
 available MC truth information. The `-n` option sets the number of events (in this case 10) while `-N` prints out
 event information. Usually, the TGeoManager geometry information is stored in the event input ROOT file, so the same
 filename should be used for both the `-e` and `-g` options if this is indeed the case.
-
-To use deep learning vertexing (DLVtx), make sure LArRecoND and LArContent is first built with LibTorch enabled, then use
-the [PandoraSettings_LArRecoND_ThreeD_DLVtx.xml](settings/PandoraSettings_LArRecoND_ThreeD_DLVtx.xml) settings file.
 
 ### Event displays
 
@@ -383,16 +375,14 @@ Hierarchy Tools while the local ones are used by the CAF truth matching. A map i
 the unique ID numbers. If these MC ID variable names are not provided, then only the unique MC IDs are used (the local IDs are
 set equal to them), meaning that the CAF truth matching will be incomplete.
 
-The xml settings files [PandoraSettings_LArRecoND_ThreeD.xml](settings/PandoraSettings_LArRecoND_ThreeD.xml) and
-[PandoraSettings_LArRecoND_ThreeD_DLVtx.xml](settings/PandoraSettings_LArRecoND_ThreeD_DLVtx.xml) contain
+The xml settings file [PandoraSettings_LArRecoND_ThreeD.xml](settings/PandoraSettings_LArRecoND_ThreeD.xml) contains
 (commented out) examples of using LArContent's
 [LArHierarchyValidation](https://github.com/PandoraPFA/LArContent/blob/master/larpandoracontent/LArMonitoring/HierarchyValidationAlgorithm.h)
 algorithm, which can be used to create event and particle-level ROOT output files that contain much more detail of the hierarchy than the
 above LArRecoND analysis algorithm, such as complete lists of all possible reco-MC matches.
-The xml files also contain (commented out) examples of using the MicroBooNE validation algorithm
+The xml file also contains (commented out) examples of using the MicroBooNE validation algorithm
 [LArNeutrinoEventValidation](https://github.com/PandoraPFA/LArContent/blob/master/larpandoracontent/LArMonitoring/NeutrinoEventValidationAlgorithm.h),
 which only works for events containing single neutrino interactions (with cosmic rays).
-
 
 ## Fermigrid jobs
 
@@ -436,19 +426,18 @@ to catch any major changes in the reconstruction output.
 
 It does a few things:
 
- - It builds the software using the `build.sh` script, which builds Pandora and
- LArRecoND with all dependencies.
- - It runs a few basic tests, which include running the `PandoraInterface`
- executable with a few different settings files and input files, and checking
- that the output ROOT files are created and look vaguely valid.
- - It compares the output ROOT files against 2 refence ROOT files: one dynamically
- built on the master branch, and another for a given tagged release. This
- comparison is doing using the `validation/ciRecoValidation.py` script.
- - Finally, the result of this check, both a table of the raw max, min, average
- etc, is commented on any new PRs, and a full image of the output plots is
- uploaded to the PR for inspection.
-   - The data used for the plots is also uploaded to the CI, for manual inspection if needed.
-
+- It builds the software using the `build.sh` script, which builds Pandora and
+  LArRecoND with all dependencies.
+- It runs a few basic tests, which include running the `PandoraInterface`
+  executable with a few different settings files and input files, and checking
+  that the output ROOT files are created and look vaguely valid.
+- It compares the output ROOT files against 2 refence ROOT files: one dynamically
+  built on the master branch, and another for a given tagged release. This
+  comparison is doing using the `validation/ciRecoValidation.py` script.
+- Finally, the result of this check, both a table of the raw max, min, average
+  etc, is commented on any new PRs, and a full image of the output plots is
+  uploaded to the PR for inspection.
+  - The data used for the plots is also uploaded to the CI, for manual inspection if needed.
 
 ## License and Copyright
 
@@ -465,8 +454,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.

@@ -429,7 +429,7 @@ def runMiniRun4():
                      'Merged2x2MINERvA_v3_withRock.root', 'Default')
 
     # Run parameters
-    rPars = recoPars('PandoraSettings_LArRecoND_ThreeD_DLVtx.xml', 'both',
+    rPars = recoPars('PandoraSettings_LArRecoND_ThreeD.xml', 'both',
                      'AllHitsSliceNu', True)
 
     # Create the job scripts
@@ -452,7 +452,7 @@ def runEDepSim():
     gPars = geomPars('volArgonCubeDetector_PV_0', 'ArgonCube', True, '', 'EDepSimGeometry')
 
     # Run parameters
-    rPars = recoPars('PandoraSettings_LArRecoND_ThreeD_DLVtx.xml', 'both', 'AllHitsNu', True)
+    rPars = recoPars('PandoraSettings_LArRecoND_ThreeD.xml', 'both', 'AllHitsNu', True)
 
     # Create the job scripts
     createJobs(sPars, gPars, rPars)

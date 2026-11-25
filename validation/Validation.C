@@ -288,11 +288,11 @@ void DisplaySimpleMCEventMatches(const SimpleMCEvent &simpleMCEvent, const Param
                       << simpleMCTarget.m_isBeamParticle << ", CR " << simpleMCTarget.m_isCosmicRay << ", MCPDG "
                       << simpleMCPrimary.m_pdgCode << ", Energy " << simpleMCPrimary.m_energy << ", Dist. "
                       << std::sqrt((simpleMCPrimary.m_vertex.m_x - simpleMCPrimary.m_endpoint.m_x) *
-                                       (simpleMCPrimary.m_vertex.m_x - simpleMCPrimary.m_endpoint.m_x) +
-                                   (simpleMCPrimary.m_vertex.m_y - simpleMCPrimary.m_endpoint.m_y) *
-                                       (simpleMCPrimary.m_vertex.m_y - simpleMCPrimary.m_endpoint.m_y) +
-                                   (simpleMCPrimary.m_vertex.m_z - simpleMCPrimary.m_endpoint.m_z) *
-                                       (simpleMCPrimary.m_vertex.m_z - simpleMCPrimary.m_endpoint.m_z))
+                                 (simpleMCPrimary.m_vertex.m_x - simpleMCPrimary.m_endpoint.m_x) +
+                             (simpleMCPrimary.m_vertex.m_y - simpleMCPrimary.m_endpoint.m_y) *
+                                 (simpleMCPrimary.m_vertex.m_y - simpleMCPrimary.m_endpoint.m_y) +
+                             (simpleMCPrimary.m_vertex.m_z - simpleMCPrimary.m_endpoint.m_z) *
+                                 (simpleMCPrimary.m_vertex.m_z - simpleMCPrimary.m_endpoint.m_z))
                       << ", nMCHits " << simpleMCPrimary.m_nMCHitsTotal << " (" << simpleMCPrimary.m_nMCHitsU << ", "
                       << simpleMCPrimary.m_nMCHitsV << ", " << simpleMCPrimary.m_nMCHitsW << ")" << std::endl;
 
@@ -361,8 +361,7 @@ void CountPfoMatches(const SimpleMCEvent &simpleMCEvent, const Parameters &param
         targetResult.m_fileIdentifier = simpleMCEvent.m_fileIdentifier;
         targetResult.m_eventNumber = simpleMCEvent.m_eventNumber;
         targetResult.m_isCorrect = (simpleMCTarget.m_isNeutrino && simpleMCTarget.m_isCorrectNu) ||
-                                   (simpleMCTarget.m_isBeamParticle && simpleMCTarget.m_isCorrectTB) ||
-                                   (simpleMCTarget.m_isCosmicRay && simpleMCTarget.m_isCorrectCR);
+            (simpleMCTarget.m_isBeamParticle && simpleMCTarget.m_isCorrectTB) || (simpleMCTarget.m_isCosmicRay && simpleMCTarget.m_isCorrectCR);
 
         if (simpleMCTarget.m_nTargetMatches > 0)
         {
@@ -404,14 +403,12 @@ void CountPfoMatches(const SimpleMCEvent &simpleMCEvent, const Parameters &param
             primaryResult.m_nMCHitsTotal = simpleMCPrimary.m_nMCHitsTotal;
             primaryResult.m_nBestMatchSharedHitsTotal = simpleMCPrimary.m_bestMatchPfoNSharedHitsTotal;
             primaryResult.m_nBestMatchRecoHitsTotal = simpleMCPrimary.m_bestMatchPfoNHitsTotal;
-            primaryResult.m_bestMatchCompleteness =
-                (simpleMCPrimary.m_nMCHitsTotal > 0)
-                    ? static_cast<float>(simpleMCPrimary.m_bestMatchPfoNSharedHitsTotal) / static_cast<float>(simpleMCPrimary.m_nMCHitsTotal)
-                    : 0.f;
+            primaryResult.m_bestMatchCompleteness = (simpleMCPrimary.m_nMCHitsTotal > 0)
+                ? static_cast<float>(simpleMCPrimary.m_bestMatchPfoNSharedHitsTotal) / static_cast<float>(simpleMCPrimary.m_nMCHitsTotal)
+                : 0.f;
             primaryResult.m_bestMatchPurity = (simpleMCPrimary.m_bestMatchPfoNHitsTotal > 0)
-                                                  ? static_cast<float>(simpleMCPrimary.m_bestMatchPfoNSharedHitsTotal) /
-                                                        static_cast<float>(simpleMCPrimary.m_bestMatchPfoNHitsTotal)
-                                                  : 0.f;
+                ? static_cast<float>(simpleMCPrimary.m_bestMatchPfoNSharedHitsTotal) / static_cast<float>(simpleMCPrimary.m_bestMatchPfoNHitsTotal)
+                : 0.f;
             primaryResult.m_isCorrectParticleId = IsGoodParticleIdMatch(simpleMCPrimary, simpleMCPrimary.m_bestMatchPfoPdgCode);
 
             if ((simpleMCPrimary.m_nPrimaryMatchedPfos > 0) && primaryResult.m_isCorrectParticleId)
@@ -421,8 +418,8 @@ void CountPfoMatches(const SimpleMCEvent &simpleMCEvent, const Parameters &param
                 targetResult.m_isCorrect = false;
 
             const float pTot(std::sqrt(simpleMCPrimary.m_momentum.m_x * simpleMCPrimary.m_momentum.m_x +
-                                       simpleMCPrimary.m_momentum.m_y * simpleMCPrimary.m_momentum.m_y +
-                                       simpleMCPrimary.m_momentum.m_z * simpleMCPrimary.m_momentum.m_z));
+                simpleMCPrimary.m_momentum.m_y * simpleMCPrimary.m_momentum.m_y +
+                simpleMCPrimary.m_momentum.m_z * simpleMCPrimary.m_momentum.m_z));
             primaryResult.m_trueMomentum = pTot;
         }
 
@@ -593,10 +590,9 @@ void DisplayInteractionCountingMap(const InteractionCountingMap &interactionCoun
                                  ? 100.f * static_cast<float>(countingDetails.m_nMatch3Plus) / static_cast<float>(countingDetails.m_nTotal)
                                  : 0.f)
                       << "%|, correctId "
-                      << ((countingDetails.m_nTotal - countingDetails.m_nMatch0 > 0)
-                                 ? 100.f * static_cast<float>(countingDetails.m_correctId) /
-                                       static_cast<float>(countingDetails.m_nTotal - countingDetails.m_nMatch0)
-                                 : 0.f)
+                      << ((countingDetails.m_nTotal - countingDetails.m_nMatch0 > 0) ? 100.f * static_cast<float>(countingDetails.m_correctId) /
+                                     static_cast<float>(countingDetails.m_nTotal - countingDetails.m_nMatch0)
+                                                                                     : 0.f)
                       << "%" << std::endl;
 
             if (!parameters.m_mapFileName.empty())
@@ -618,10 +614,9 @@ void DisplayInteractionCountingMap(const InteractionCountingMap &interactionCoun
                                    ? 100.f * static_cast<float>(countingDetails.m_nMatch3Plus) / static_cast<float>(countingDetails.m_nTotal)
                                    : 0.f)
                         << "%|, correctId "
-                        << ((countingDetails.m_nTotal - countingDetails.m_nMatch0 > 0)
-                                   ? 100.f * static_cast<float>(countingDetails.m_correctId) /
-                                         static_cast<float>(countingDetails.m_nTotal - countingDetails.m_nMatch0)
-                                   : 0.f)
+                        << ((countingDetails.m_nTotal - countingDetails.m_nMatch0 > 0) ? 100.f * static_cast<float>(countingDetails.m_correctId) /
+                                       static_cast<float>(countingDetails.m_nTotal - countingDetails.m_nMatch0)
+                                                                                       : 0.f)
                         << "%" << std::endl;
             }
         }
@@ -760,31 +755,30 @@ void FillTargetHistogramCollection(const std::string &histPrefix, const TargetRe
 
     if (!targetHistogramCollection.m_hVtxDeltaXY)
     {
-	targetHistogramCollection.m_hVtxDeltaXY = new TH2F((histPrefix + "VtxDeltaXY").c_str(), "", 100, -5.0, 5.0, 100, -5.0, 5.0);
-	targetHistogramCollection.m_hVtxDeltaXY->GetXaxis()->SetTitle("Vertex #DeltaX [cm]");
-	targetHistogramCollection.m_hVtxDeltaXY->GetYaxis()->SetTitle("Vertex #DeltaY [cm]");
+        targetHistogramCollection.m_hVtxDeltaXY = new TH2F((histPrefix + "VtxDeltaXY").c_str(), "", 100, -5.0, 5.0, 100, -5.0, 5.0);
+        targetHistogramCollection.m_hVtxDeltaXY->GetXaxis()->SetTitle("Vertex #DeltaX [cm]");
+        targetHistogramCollection.m_hVtxDeltaXY->GetYaxis()->SetTitle("Vertex #DeltaY [cm]");
     }
 
     if (!targetHistogramCollection.m_hVtxDeltaZY)
     {
-	targetHistogramCollection.m_hVtxDeltaZY = new TH2F((histPrefix + "VtxDeltaZY").c_str(), "", 100, -5.0, 5.0, 100, -5.0, 5.0);
-	targetHistogramCollection.m_hVtxDeltaZY->GetXaxis()->SetTitle("Vertex #DeltaZ [cm]");
-	targetHistogramCollection.m_hVtxDeltaZY->GetYaxis()->SetTitle("Vertex #DeltaY [cm]");
+        targetHistogramCollection.m_hVtxDeltaZY = new TH2F((histPrefix + "VtxDeltaZY").c_str(), "", 100, -5.0, 5.0, 100, -5.0, 5.0);
+        targetHistogramCollection.m_hVtxDeltaZY->GetXaxis()->SetTitle("Vertex #DeltaZ [cm]");
+        targetHistogramCollection.m_hVtxDeltaZY->GetYaxis()->SetTitle("Vertex #DeltaY [cm]");
     }
 
     if (!targetHistogramCollection.m_hVtxDeltaZX)
     {
-	targetHistogramCollection.m_hVtxDeltaZX = new TH2F((histPrefix + "VtxDeltaZX").c_str(), "", 100, -5.0, 5.0, 100, -5.0, 5.0);
-	targetHistogramCollection.m_hVtxDeltaZX->GetXaxis()->SetTitle("Vertex #DeltaZ [cm]");
-	targetHistogramCollection.m_hVtxDeltaZX->GetYaxis()->SetTitle("Vertex #DeltaX [cm]");
+        targetHistogramCollection.m_hVtxDeltaZX = new TH2F((histPrefix + "VtxDeltaZX").c_str(), "", 100, -5.0, 5.0, 100, -5.0, 5.0);
+        targetHistogramCollection.m_hVtxDeltaZX->GetXaxis()->SetTitle("Vertex #DeltaZ [cm]");
+        targetHistogramCollection.m_hVtxDeltaZX->GetYaxis()->SetTitle("Vertex #DeltaX [cm]");
     }
 
     targetHistogramCollection.m_hVtxDeltaX->Fill(targetResult.m_vertexOffset.m_x);
     targetHistogramCollection.m_hVtxDeltaY->Fill(targetResult.m_vertexOffset.m_y);
     targetHistogramCollection.m_hVtxDeltaZ->Fill(targetResult.m_vertexOffset.m_z);
     targetHistogramCollection.m_hVtxDeltaR->Fill(std::sqrt(targetResult.m_vertexOffset.m_x * targetResult.m_vertexOffset.m_x +
-                                                           targetResult.m_vertexOffset.m_y * targetResult.m_vertexOffset.m_y +
-                                                           targetResult.m_vertexOffset.m_z * targetResult.m_vertexOffset.m_z));
+        targetResult.m_vertexOffset.m_y * targetResult.m_vertexOffset.m_y + targetResult.m_vertexOffset.m_z * targetResult.m_vertexOffset.m_z));
     targetHistogramCollection.m_hVtxDeltaXY->Fill(targetResult.m_vertexOffset.m_x, targetResult.m_vertexOffset.m_y);
     targetHistogramCollection.m_hVtxDeltaZY->Fill(targetResult.m_vertexOffset.m_z, targetResult.m_vertexOffset.m_y);
     targetHistogramCollection.m_hVtxDeltaZX->Fill(targetResult.m_vertexOffset.m_z, targetResult.m_vertexOffset.m_x);
@@ -875,7 +869,7 @@ void ProcessHistogramCollections(const InteractionPrimaryHistogramMap &interacti
 
     for (InteractionPrimaryHistogramMap::const_iterator iter = interactionPrimaryHistogramMap.begin(),
                                                         iterEnd = interactionPrimaryHistogramMap.end();
-         iter != iterEnd; ++iter)
+        iter != iterEnd; ++iter)
     {
         const InteractionType interactionType(iter->first);
         const PrimaryHistogramMap &primaryHistogramMap(iter->second);
@@ -922,7 +916,7 @@ void WriteHistogramCollections(const std::string &outputFile, const InteractionP
 
     for (InteractionPrimaryHistogramMap::const_iterator iter = interactionPrimaryHistogramMap.begin(),
                                                         iterEnd = interactionPrimaryHistogramMap.end();
-         iter != iterEnd; ++iter)
+        iter != iterEnd; ++iter)
     {
         const PrimaryHistogramMap &primaryHistogramMap(iter->second);
 
@@ -941,7 +935,7 @@ void WriteHistogramCollections(const std::string &outputFile, const InteractionP
 
     for (InteractionTargetHistogramMap::const_iterator hIter = interactionTargetHistogramMap.begin(),
                                                        iterEnd = interactionTargetHistogramMap.end();
-         hIter != iterEnd; ++hIter)
+        hIter != iterEnd; ++hIter)
     {
         const TargetHistogramCollection &targetHistogramCollection(hIter->second);
         targetHistogramCollection.m_hVtxDeltaX->Write();

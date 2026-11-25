@@ -1,9 +1,9 @@
 // ROOT includes
-#include "TROOT.h"
-#include "TInterpreter.h"
 #include "TFile.h"
-#include "TTree.h"
 #include "TH1D.h"
+#include "TInterpreter.h"
+#include "TROOT.h"
+#include "TTree.h"
 
 // C++ includes
 #include <cstdint>
@@ -12,10 +12,8 @@
 
 // NB: this is not so elegant for a first pass, but it seems to work
 
-void rootToRootConversion(
-  const bool isMC=true,
-  const std::string fname="MicroProdN3p1_NDLAr_2E18_FHC.flow.nu.0000001.FLOW.hdf5_hits_uproot.root",
-  const std::string outname="MicroProdN3p1_NDLAr_2E18_FHC.flow.nu.0000001.FLOW.hdf5_hits.root" )
+void rootToRootConversion(const bool isMC = true, const std::string fname = "MicroProdN3p1_NDLAr_2E18_FHC.flow.nu.0000001.FLOW.hdf5_hits_uproot.root",
+    const std::string outname = "MicroProdN3p1_NDLAr_2E18_FHC.flow.nu.0000001.FLOW.hdf5_hits.root")
 {
     // generate the dictionaries for vectors of vectors : see e.g.
     //   https://root-forum.cern.ch/t/problem-in-accessing-vector-vector-float/27983
@@ -24,7 +22,7 @@ void rootToRootConversion(
     gInterpreter->GenerateDictionary("vector<vector<long long> >", "vector");
     gInterpreter->GenerateDictionary("vector<vector<int> >", "vector");
 
-    TFile *f = new TFile(fname.c_str(),"read");
+    TFile *f = new TFile(fname.c_str(), "read");
     const int MaxDepthArray = 10000;
     const int MaxDepthArrayMC = isMC ? MaxDepthArray : 1;
     const int MaxDepthArrayNu = isMC ? 500 : 1;
@@ -47,17 +45,17 @@ void rootToRootConversion(
     Float_t in_E[MaxDepthArray];
 
     // Hit truth
-    int     nmatchesinsubevent(0);
+    int nmatchesinsubevent(0);
     Float_t packetFrac[MaxDepthArrayMC];
-    Long64_t  particleID[MaxDepthArrayMC];
-    Long64_t  particleIDLocal[MaxDepthArrayMC];
-    Int_t   pdg[MaxDepthArrayMC];
-    Long64_t  vertexID[MaxDepthArrayMC];
-    Long64_t  segmentID[MaxDepthArrayMC];
+    Long64_t particleID[MaxDepthArrayMC];
+    Long64_t particleIDLocal[MaxDepthArrayMC];
+    Int_t pdg[MaxDepthArrayMC];
+    Long64_t vertexID[MaxDepthArrayMC];
+    Long64_t segmentID[MaxDepthArrayMC];
 
     // MCP
     // We have a maximum depth set by the h5_to_root_ndlarflow.py script matching the 10000 set above. For data mode, this will not be used.
-    int     nmcpinsubevent(0);
+    int nmcpinsubevent(0);
     Float_t in_mcp_energy[MaxDepthArrayMC];
     Float_t in_mcp_px[MaxDepthArrayMC];
     Float_t in_mcp_py[MaxDepthArrayMC];
@@ -68,18 +66,18 @@ void rootToRootConversion(
     Float_t in_mcp_endx[MaxDepthArrayMC];
     Float_t in_mcp_endy[MaxDepthArrayMC];
     Float_t in_mcp_endz[MaxDepthArrayMC];
-    Int_t   in_mcp_pdg[MaxDepthArrayMC];
-    Long64_t  in_mcp_nuid[MaxDepthArrayMC];
-    Long64_t  in_mcp_vertex_id[MaxDepthArrayMC];
-    Long64_t  in_mcp_idLocal[MaxDepthArrayMC];
-    Long64_t  in_mcp_id[MaxDepthArrayMC];
-    Long64_t  in_mcp_mother[MaxDepthArrayMC];
+    Int_t in_mcp_pdg[MaxDepthArrayMC];
+    Long64_t in_mcp_nuid[MaxDepthArrayMC];
+    Long64_t in_mcp_vertex_id[MaxDepthArrayMC];
+    Long64_t in_mcp_idLocal[MaxDepthArrayMC];
+    Long64_t in_mcp_id[MaxDepthArrayMC];
+    Long64_t in_mcp_mother[MaxDepthArrayMC];
     // Neutrinos: see caveat above, but here we'll have a hard cap at 500 -- TODO: can we tolerate having this officially set to the maximum subevent size of 10000 as well?
-    int     nnuinsubevent(0);
-    Long64_t  in_nuID[MaxDepthArrayNu];
-    Int_t   in_nuPDG[MaxDepthArrayNu];
-    Int_t   in_mode[MaxDepthArrayNu];
-    Int_t   in_ccnc[MaxDepthArrayNu];
+    int nnuinsubevent(0);
+    Long64_t in_nuID[MaxDepthArrayNu];
+    Int_t in_nuPDG[MaxDepthArrayNu];
+    Int_t in_mode[MaxDepthArrayNu];
+    Int_t in_ccnc[MaxDepthArrayNu];
     Float_t in_nue[MaxDepthArrayNu];
     Float_t in_nupx[MaxDepthArrayNu];
     Float_t in_nupy[MaxDepthArrayNu];
@@ -88,46 +86,48 @@ void rootToRootConversion(
     Float_t in_nuvtxy[MaxDepthArrayNu];
     Float_t in_nuvtxz[MaxDepthArrayNu];
 
-    TTree* tr = (TTree*)f->Get("subevents");
-    tr->SetBranchAddress("run",&in_run);
-    tr->SetBranchAddress("subrun",&in_subrun);
-    tr->SetBranchAddress("event",&in_event);
-    tr->SetBranchAddress("triggers",&in_triggers);
-    tr->SetBranchAddress("unix_ts",&in_unix_ts);
+    TTree *tr = (TTree *)f->Get("subevents");
+    tr->SetBranchAddress("run", &in_run);
+    tr->SetBranchAddress("subrun", &in_subrun);
+    tr->SetBranchAddress("event", &in_event);
+    tr->SetBranchAddress("triggers", &in_triggers);
+    tr->SetBranchAddress("unix_ts", &in_unix_ts);
 
     // Is this a legacy mode tree?
-    bool legacyMode=false;
-    if ( !tr->FindBranch("unix_ts_usec") ){
-      legacyMode=true;
+    bool legacyMode = false;
+    if (!tr->FindBranch("unix_ts_usec"))
+    {
+        legacyMode = true;
     }
     if (!legacyMode)
-      tr->SetBranchAddress("unix_ts_usec",&in_unix_ts_usec);
+        tr->SetBranchAddress("unix_ts_usec", &in_unix_ts_usec);
 
-    tr->SetBranchAddress("event_start_t",&in_event_start_t);
-    tr->SetBranchAddress("event_end_t",&in_event_end_t);
-    tr->SetBranchAddress("subevent",&in_subevent);
+    tr->SetBranchAddress("event_start_t", &in_event_start_t);
+    tr->SetBranchAddress("event_end_t", &in_event_end_t);
+    tr->SetBranchAddress("subevent", &in_subevent);
 
-    tr->SetBranchAddress("nx",&Nhits);
-    tr->SetBranchAddress("x",&in_x);
-    tr->SetBranchAddress("y",&in_y);
-    tr->SetBranchAddress("z",&in_z);
-    tr->SetBranchAddress("ts",&in_ts);
-    tr->SetBranchAddress("io_group",&in_io_group);
-    tr->SetBranchAddress("io_channel",&in_io_channel);
-    tr->SetBranchAddress("chip_id",&in_chip_id);
-    tr->SetBranchAddress("channel_id",&in_channel_id);
-    tr->SetBranchAddress("charge",&in_charge);
-    tr->SetBranchAddress("E",&in_E);
+    tr->SetBranchAddress("nx", &Nhits);
+    tr->SetBranchAddress("x", &in_x);
+    tr->SetBranchAddress("y", &in_y);
+    tr->SetBranchAddress("z", &in_z);
+    tr->SetBranchAddress("ts", &in_ts);
+    tr->SetBranchAddress("io_group", &in_io_group);
+    tr->SetBranchAddress("io_channel", &in_io_channel);
+    tr->SetBranchAddress("chip_id", &in_chip_id);
+    tr->SetBranchAddress("channel_id", &in_channel_id);
+    tr->SetBranchAddress("charge", &in_charge);
+    tr->SetBranchAddress("E", &in_E);
 
-    if ( isMC ) {
-        tr->SetBranchAddress("matches",&matches);
-        tr->SetBranchAddress("hit_packetFrac",&packetFrac);
-        tr->SetBranchAddress("hit_particleID",&particleID);
-        tr->SetBranchAddress("hit_particleIDLocal",&particleIDLocal);
-        tr->SetBranchAddress("hit_pdg",&pdg);
-        tr->SetBranchAddress("hit_vertexID",&vertexID);
-        tr->SetBranchAddress("hit_segmentID",&segmentID);
-        tr->SetBranchAddress("nhit_packetFrac",&nmatchesinsubevent);
+    if (isMC)
+    {
+        tr->SetBranchAddress("matches", &matches);
+        tr->SetBranchAddress("hit_packetFrac", &packetFrac);
+        tr->SetBranchAddress("hit_particleID", &particleID);
+        tr->SetBranchAddress("hit_particleIDLocal", &particleIDLocal);
+        tr->SetBranchAddress("hit_pdg", &pdg);
+        tr->SetBranchAddress("hit_vertexID", &vertexID);
+        tr->SetBranchAddress("hit_segmentID", &segmentID);
+        tr->SetBranchAddress("nhit_packetFrac", &nmatchesinsubevent);
 
         tr->SetBranchAddress("mcp_energy", &in_mcp_energy);
         tr->SetBranchAddress("mcp_px", &in_mcp_px);
@@ -145,7 +145,7 @@ void rootToRootConversion(
         tr->SetBranchAddress("mcp_idLocal", &in_mcp_idLocal);
         tr->SetBranchAddress("mcp_id", &in_mcp_id);
         tr->SetBranchAddress("mcp_mother", &in_mcp_mother);
-        tr->SetBranchAddress("nmcp_energy",&nmcpinsubevent);
+        tr->SetBranchAddress("nmcp_energy", &nmcpinsubevent);
 
         tr->SetBranchAddress("nuID", &in_nuID); // both nuID and vertex_id appear to use this value
         tr->SetBranchAddress("nuPDG", &in_nuPDG);
@@ -158,10 +158,10 @@ void rootToRootConversion(
         tr->SetBranchAddress("nuvtxx", &in_nuvtxx);
         tr->SetBranchAddress("nuvtxy", &in_nuvtxy);
         tr->SetBranchAddress("nuvtxz", &in_nuvtxz);
-        tr->SetBranchAddress("nnuID",&nnuinsubevent);
+        tr->SetBranchAddress("nnuID", &nnuinsubevent);
     }
 
-    long sum=0;
+    long sum = 0;
 
     long NEvents = tr->GetEntries();
 
@@ -180,15 +180,15 @@ void rootToRootConversion(
     std::vector<uint8_t> channel_id;
     std::vector<float> E;
     std::vector<float> charge;
-  
+
     // segmentIndex, particleIndex unfilled!
-    std::vector< std::vector<int> >   hit_pdg;
-    std::vector< std::vector<long long> >  hit_segmentID;
-    std::vector< std::vector<long long> >  hit_particleID;
-    std::vector< std::vector<long long> >  hit_particleIDLocal;
-    std::vector< std::vector<long long> >  hit_vertexID;
-    std::vector< std::vector<float> > hit_packetFrac;
-    
+    std::vector<std::vector<int>> hit_pdg;
+    std::vector<std::vector<long long>> hit_segmentID;
+    std::vector<std::vector<long long>> hit_particleID;
+    std::vector<std::vector<long long>> hit_particleIDLocal;
+    std::vector<std::vector<long long>> hit_vertexID;
+    std::vector<std::vector<float>> hit_packetFrac;
+
     std::vector<float> mcp_px;
     std::vector<float> mcp_py;
     std::vector<float> mcp_pz;
@@ -219,7 +219,7 @@ void rootToRootConversion(
     std::vector<int> mode;
     std::vector<int> ccnc;
 
-    TFile *outFile = new TFile(outname.c_str(),"recreate");
+    TFile *outFile = new TFile(outname.c_str(), "recreate");
 
     TTree *outgoingTree = new TTree("events", "events");
     outgoingTree->Branch("run", &run);
@@ -227,11 +227,11 @@ void rootToRootConversion(
     outgoingTree->Branch("event", &event);
     outgoingTree->Branch("event_start_t", &event_start_t);
     outgoingTree->Branch("event_end_t", &event_end_t);
-    outgoingTree->Branch("triggers",&triggers);
+    outgoingTree->Branch("triggers", &triggers);
     outgoingTree->Branch("unix_ts", &unix_ts);
     if (!legacyMode)
-      outgoingTree->Branch("unix_ts_usec", &unix_ts_usec);
-    outgoingTree->Branch("nhits",&nhits);
+        outgoingTree->Branch("unix_ts_usec", &unix_ts_usec);
+    outgoingTree->Branch("nhits", &nhits);
     outgoingTree->Branch("x", &x);
     outgoingTree->Branch("y", &y);
     outgoingTree->Branch("z", &z);
@@ -242,7 +242,8 @@ void rootToRootConversion(
     outgoingTree->Branch("channel_id", &channel_id);
     outgoingTree->Branch("E", &E);
     outgoingTree->Branch("charge", &charge);
-    if ( isMC ) {
+    if (isMC)
+    {
         outgoingTree->Branch("hit_pdg", &hit_pdg);
         outgoingTree->Branch("hit_segmentID", &hit_segmentID);
         outgoingTree->Branch("hit_particleID", &hit_particleID);
@@ -279,87 +280,100 @@ void rootToRootConversion(
         outgoingTree->Branch("ccnc", &ccnc);
     }
 
-    int thisRun=0;
-    int thisSubRun=0;
-    int thisEvent=0;
-    int thisTrigger=-999;
-    unsigned long sum_matches=0;
+    int thisRun = 0;
+    int thisSubRun = 0;
+    int thisEvent = 0;
+    int thisTrigger = -999;
+    unsigned long sum_matches = 0;
     std::vector<short> all_matches;
-    std::vector<int>   all_hit_pdg;
-    std::vector<long long>  all_hit_segmentID;
-    std::vector<long long>  all_hit_particleID;
-    std::vector<long long>  all_hit_particleIDLocal;
-    std::vector<long long>  all_hit_vertexID;
+    std::vector<int> all_hit_pdg;
+    std::vector<long long> all_hit_segmentID;
+    std::vector<long long> all_hit_particleID;
+    std::vector<long long> all_hit_particleIDLocal;
+    std::vector<long long> all_hit_vertexID;
     std::vector<float> all_hit_packetFrac;
 
     // First entry is bogus, just sets the right types in uproot. Start on idx 1
-    for (unsigned int idx=1; idx<=NEvents; ++idx) {
-        if (idx!=NEvents){
+    for (unsigned int idx = 1; idx <= NEvents; ++idx)
+    {
+        if (idx != NEvents)
+        {
             tr->GetEntry(idx);
         }
-        if ( idx==1 ){
+        if (idx == 1)
+        {
             thisRun = in_run;
             thisSubRun = in_subrun;
             thisEvent = in_event;
-	    
-	}
-	if ( idx%100==0 ) std::cout << in_run << ":" << in_subrun << ":" << in_event << ":" << in_subevent << std::endl;
-        if ( idx > 1 && ( (in_run!=thisRun || in_subrun!=thisSubRun || in_event!=thisEvent) || idx==NEvents ) ) {
-            if ( isMC ) {
+        }
+        if (idx % 100 == 0)
+            std::cout << in_run << ":" << in_subrun << ":" << in_event << ":" << in_subevent << std::endl;
+        if (idx > 1 && ((in_run != thisRun || in_subrun != thisSubRun || in_event != thisEvent) || idx == NEvents))
+        {
+            if (isMC)
+            {
                 // Something has changed... finish with the matches, fill the tree, and reset
                 // Vectors of matches
-                if ( sum_matches!=all_hit_packetFrac.size() ){
-                    std::cout << "WARNING!!! For R" << thisRun << ", S" << thisSubRun << ", E"
-                            << thisEvent << " -- the summed number of matches expected (" << sum_matches << ") "
-                            << "does **NOT** match the size of the packetFrac vector (" << all_hit_packetFrac.size()
-                            << "). This is a sign of trouble." << std::endl;
+                if (sum_matches != all_hit_packetFrac.size())
+                {
+                    std::cout << "WARNING!!! For R" << thisRun << ", S" << thisSubRun << ", E" << thisEvent
+                              << " -- the summed number of matches expected (" << sum_matches << ") "
+                              << "does **NOT** match the size of the packetFrac vector (" << all_hit_packetFrac.size()
+                              << "). This is a sign of trouble." << std::endl;
                 }
                 unsigned long matchIndex = 0;
-                std::vector<int>   this_hit_pdg;
-                std::vector<long long>  this_hit_segmentID;
-                std::vector<long long>  this_hit_particleID;
-                std::vector<long long>  this_hit_particleIDLocal;
-                std::vector<long long>  this_hit_vertexID;
+                std::vector<int> this_hit_pdg;
+                std::vector<long long> this_hit_segmentID;
+                std::vector<long long> this_hit_particleID;
+                std::vector<long long> this_hit_particleIDLocal;
+                std::vector<long long> this_hit_vertexID;
                 std::vector<float> this_hit_packetFrac;
-                for ( unsigned int idxMatch=0; idxMatch<=(unsigned int)all_hit_packetFrac.size(); ++idxMatch ){
-                    if( this_hit_pdg.size() == (unsigned int)all_matches[matchIndex] || idxMatch==(unsigned int)all_hit_packetFrac.size()) {
-                        hit_pdg.push_back( this_hit_pdg );
-                        hit_segmentID.push_back( this_hit_segmentID );
-                        hit_particleID.push_back( this_hit_particleID );
-                        hit_particleIDLocal.push_back( this_hit_particleIDLocal );
-                        hit_vertexID.push_back( this_hit_vertexID );
-                        hit_packetFrac.push_back( this_hit_packetFrac );
+                for (unsigned int idxMatch = 0; idxMatch <= (unsigned int)all_hit_packetFrac.size(); ++idxMatch)
+                {
+                    if (this_hit_pdg.size() == (unsigned int)all_matches[matchIndex] || idxMatch == (unsigned int)all_hit_packetFrac.size())
+                    {
+                        hit_pdg.push_back(this_hit_pdg);
+                        hit_segmentID.push_back(this_hit_segmentID);
+                        hit_particleID.push_back(this_hit_particleID);
+                        hit_particleIDLocal.push_back(this_hit_particleIDLocal);
+                        hit_vertexID.push_back(this_hit_vertexID);
+                        hit_packetFrac.push_back(this_hit_packetFrac);
                         // mini-reset
-                        matchIndex+=1;
+                        matchIndex += 1;
                         this_hit_pdg.clear();
                         this_hit_segmentID.clear();
                         this_hit_particleID.clear();
                         this_hit_particleIDLocal.clear();
                         this_hit_vertexID.clear();
                         this_hit_packetFrac.clear();
-			// break if we have run out of hits to fill matches for match
-			// We have to check for unmatched hits first because if there
-			//   is one as the last hit, we'd miss it if we checked idxMatch
-			//   first (since we would be at the end of the loop already)
-			if ( matchIndex >= all_matches.size() ) break;
-			bool extraReset=false;
-			while ( all_matches[matchIndex]==0 ) {
-			  hit_pdg.push_back( this_hit_pdg );
-			  hit_segmentID.push_back( this_hit_segmentID );
-			  hit_particleID.push_back( this_hit_particleID );
-			  hit_particleIDLocal.push_back( this_hit_particleIDLocal );
-			  hit_vertexID.push_back( this_hit_vertexID );
-			  hit_packetFrac.push_back( this_hit_packetFrac );
-			  // mini-reset
-			  matchIndex+=1;
-			  if ( matchIndex >= all_matches.size() ) {
-			    extraReset=true;
-			    break;
-			  }
-			}
-			if ( extraReset ) break;
+                        // break if we have run out of hits to fill matches for match
+                        // We have to check for unmatched hits first because if there
+                        //   is one as the last hit, we'd miss it if we checked idxMatch
+                        //   first (since we would be at the end of the loop already)
+                        if (matchIndex >= all_matches.size())
+                            break;
+                        bool extraReset = false;
+                        while (all_matches[matchIndex] == 0)
+                        {
+                            hit_pdg.push_back(this_hit_pdg);
+                            hit_segmentID.push_back(this_hit_segmentID);
+                            hit_particleID.push_back(this_hit_particleID);
+                            hit_particleIDLocal.push_back(this_hit_particleIDLocal);
+                            hit_vertexID.push_back(this_hit_vertexID);
+                            hit_packetFrac.push_back(this_hit_packetFrac);
+                            // mini-reset
+                            matchIndex += 1;
+                            if (matchIndex >= all_matches.size())
+                            {
+                                extraReset = true;
+                                break;
+                            }
+                        }
+                        if (extraReset)
+                            break;
                         // break if == end
-                        if ( idxMatch == all_hit_packetFrac.size() ) break;
+                        if (idxMatch == all_hit_packetFrac.size())
+                            break;
                     }
                     this_hit_pdg.push_back(all_hit_pdg[idxMatch]);
                     this_hit_segmentID.push_back(all_hit_segmentID[idxMatch]);
@@ -370,11 +384,11 @@ void rootToRootConversion(
                 }
             }
             // Fill
-	    nhits = (int)x.size();
+            nhits = (int)x.size();
             outgoingTree->Fill();
             // Clear
-            triggers=-999;
-	    x.clear();
+            triggers = -999;
+            x.clear();
             y.clear();
             z.clear();
             io_group.clear();
@@ -418,8 +432,8 @@ void rootToRootConversion(
             nuPDG.clear();
             mode.clear();
             ccnc.clear();
-            
-            sum_matches=0;
+
+            sum_matches = 0;
             all_matches.clear();
             all_hit_pdg.clear();
             all_hit_segmentID.clear();
@@ -432,8 +446,9 @@ void rootToRootConversion(
             thisRun = in_run;
             thisSubRun = in_subrun;
             thisEvent = in_event;
-            
-            if (idx==NEvents) break; // We're done!
+
+            if (idx == NEvents)
+                break; // We're done!
         }
 
         run = in_run;
@@ -442,12 +457,13 @@ void rootToRootConversion(
         event_start_t = in_event_start_t;
         event_end_t = in_event_end_t;
         unix_ts = in_unix_ts;
-	if (!legacyMode)
-	  unix_ts_usec = in_unix_ts_usec;
+        if (!legacyMode)
+            unix_ts_usec = in_unix_ts_usec;
         triggers = in_triggers;
-	
+
         // fill up the vectors for as much stuff as we can in this subevent:
-        for ( unsigned int idxHit=0; idxHit<(unsigned int)Nhits; ++idxHit ) {
+        for (unsigned int idxHit = 0; idxHit < (unsigned int)Nhits; ++idxHit)
+        {
             x.push_back(in_x[idxHit]);
             y.push_back(in_y[idxHit]);
             z.push_back(in_z[idxHit]);
@@ -458,20 +474,23 @@ void rootToRootConversion(
             channel_id.push_back(in_channel_id[idxHit]);
             E.push_back(in_E[idxHit]);
             charge.push_back(in_charge[idxHit]);
-            if ( isMC ) {
+            if (isMC)
+            {
                 all_matches.push_back(matches[idxHit]);
-                sum_matches+=(unsigned long)matches[idxHit];
+                sum_matches += (unsigned long)matches[idxHit];
             }
         }
-	// in case there are no hits, set up a 0 here so we don't seg fault later and push back an empty match vector
-	if ( Nhits==0 && x.size()==0 && isMC )
-	    all_matches.push_back(0);
+        // in case there are no hits, set up a 0 here so we don't seg fault later and push back an empty match vector
+        if (Nhits == 0 && x.size() == 0 && isMC)
+            all_matches.push_back(0);
 
-	if ( isMC ) {
+        if (isMC)
+        {
             // Because the arrays of matches and hits need not be sync'ed, we'll fill up
             //   vectors will all the info for the event here and then break it into sub-
             //   vectors at the end of the event...
-            for ( unsigned int idxMatch=0; idxMatch<(unsigned int)nmatchesinsubevent; ++idxMatch ) {
+            for (unsigned int idxMatch = 0; idxMatch < (unsigned int)nmatchesinsubevent; ++idxMatch)
+            {
                 all_hit_pdg.push_back(pdg[idxMatch]);
                 all_hit_segmentID.push_back(segmentID[idxMatch]);
                 all_hit_particleID.push_back(particleID[idxMatch]);
@@ -481,7 +500,8 @@ void rootToRootConversion(
             }
 
             // MCParticles
-            for ( unsigned int idxMCPart=0; idxMCPart<(unsigned int)nmcpinsubevent; ++idxMCPart ) {
+            for (unsigned int idxMCPart = 0; idxMCPart < (unsigned int)nmcpinsubevent; ++idxMCPart)
+            {
                 mcp_px.push_back(in_mcp_px[idxMCPart]);
                 mcp_py.push_back(in_mcp_py[idxMCPart]);
                 mcp_pz.push_back(in_mcp_pz[idxMCPart]);
@@ -501,7 +521,8 @@ void rootToRootConversion(
             }
 
             // Neutrinos
-            for ( unsigned int idxNu=0; idxNu<(unsigned int)nnuinsubevent; ++idxNu ) {
+            for (unsigned int idxNu = 0; idxNu < (unsigned int)nnuinsubevent; ++idxNu)
+            {
                 nuvtxx.push_back(in_nuvtxx[idxNu]);
                 nuvtxy.push_back(in_nuvtxy[idxNu]);
                 nuvtxz.push_back(in_nuvtxz[idxNu]);

@@ -26,7 +26,7 @@ runs:
         echo 'export MY_TEST_AREA=/pandora' >> /pandora/setup.sh
         echo 'export TORCH_PREFIX=/pandora/libtorch' >> /pandora/setup.sh
         echo 'export CMAKE_PREFIX_PATH=/pandora/libtorch:$CMAKE_PREFIX_PATH' >> /pandora/setup.sh
-        echo 'export FW_SEARCH_PATH=/pandora/LArRecoND/settings' >> /pandora/setup.sh
+        echo 'export FW_SEARCH_PATH=/pandora/LArRecoND/settings:/pandora/LArRecoND/settings/development' >> /pandora/setup.sh
         echo 'export FW_SEARCH_PATH=$FW_SEARCH_PATH:/pandora/LArMachineLearningData/' >> /pandora/setup.sh
 
     - name: Build Pandora Stack

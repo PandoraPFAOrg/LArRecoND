@@ -20,4 +20,5 @@ export MY_TEST_AREA=${testArea}
 
 # Set FW_SEARCH_PATH for Pandora xml run files & machine learning data etc
 export FW_SEARCH_PATH=$MY_TEST_AREA/LArRecoND/settings
+export FW_SEARCH_PATH=$MY_TEST_AREA/LArRecoND/settings/development:$FW_SEARCH_PATH
 export FW_SEARCH_PATH=$MY_TEST_AREA/LArMachineLearningData:$FW_SEARCH_PATH
